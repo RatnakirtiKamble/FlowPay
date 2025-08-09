@@ -1,0 +1,39 @@
+cabal-version:       2.4
+name:                payment-engine
+version:             0.1.0.0
+build-type:          Simple
+
+executable payment-engine
+  main-is:             Main.hs
+  hs-source-dirs:      src, app
+  build-depends:       base >=4.16 && <4.19, 
+                       servant,
+                       servant-server,
+                       warp,
+                       aeson,
+                       text,
+                       bytestring,
+                       postgresql-simple,
+                       mtl,
+                       time,
+                       wai,
+                       bcrypt,
+                       cookie,
+                       servant-auth-server,
+                       wai-extra,
+                       jose-jwt,
+                       jose
+
+  default-language:    Haskell2010
+  other-modules: 
+    Api
+    DB.Init
+    DB.Schema
+    Handlers.PaymentHandler
+    Handlers.UserHandler
+    Models.Payment
+    Models.User
+    Utils.Logger
+    Utils.Retry
+    App
+    Auth
