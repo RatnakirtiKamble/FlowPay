@@ -1,38 +1,71 @@
--- src/Handlers/PaymentHandler.hs
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
-module Handlers.PaymentHandler (paymentServer) where
+module Handlers.PaymentHandler (paymentServer, PaymentRequest(..), PaymentResponse(..)) where
 
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
+import Data.Time.Clock (getCurrentTime)
+import Database.PostgreSQL.Simple (query, execute, Only(..))
 import Servant
+import Data.Text (Text)
+import qualified Data.Text as T
 
-import App (App, AppEnv(..))
-import Models.Payment (PaymentRequest(..), PaymentResponse, Payment(..), PaymentStatus(..))
-import Database.PostgreSQL.Simple (query)
+import App (App, dbConnection)
+import Models.Merchant (Merchant(..))
+import Models.Payment (PaymentRequest(..), PaymentResponse(..))
 
-paymentServer :: PaymentRequest -> App PaymentResponse
-paymentServer req = do
-  -- Basic validation
-  if amount req <= 0
-    then throwError $ err400 { errBody = "Payment amount must be positive." }
+-- | Handle payment with API key passed via header
+paymentHandler :: Maybe Text -> PaymentRequest -> App PaymentResponse
+paymentHandler Nothing _ = throwError err401 { errBody = "Missing API key in header." }
+paymentHandler (Just key) paymentReq = do
+  let amt = paymentAmount paymentReq
+  if amt <= 0
+    then throwError err400 { errBody = "Payment amount must be positive." }
     else do
-      conn <- asks dbConnection
-      liftIO $ putStrLn $ "Processing payment request: " ++ show req
+          conn <- asks dbConnection
+          currentTime <- liftIO getCurrentTime
 
-      -- Use PostgreSQL's `RETURNING` clause to get the new row in one query.
-      results <- liftIO $ query conn
-        "INSERT INTO payments (from_acc, to_acc, amount, status) VALUES (?, ?, ?, ?) \
-        \ RETURNING id, from_acc, to_acc, amount, status, timestamp"
-        (fromAccount req, toAccount req, amount req, Success)
+          -- Query merchant by API key
+          merchants <- liftIO $ query conn
+            "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE api_key = ?"
+            (Only key)
 
-      -- Safely handle the result from the database query
-      case results of
-        [newPayment] -> do
-          liftIO $ putStrLn $ "Successfully processed and stored: " ++ show newPayment
-          return newPayment
-        _ -> do
-          -- This case should not happen with a RETURNING clause on a single INSERT,
-          -- but it's robust to handle it. It indicates a server-side issue.
-          liftIO $ putStrLn "Error: Database did not return a single row after insert."
-          throwError err500 { errBody = "Could not confirm payment creation." }
+          case merchants of
+            [merchant] -> do
+              -- Insert payment as "Pending"
+              _ <- liftIO $ execute conn
+                "INSERT INTO payments (merchant_id, amount, status, created_at) VALUES (?, ?, ?, ?)"
+                (merchantId merchant, amt, ("Pending" :: Text), currentTime)
+
+              -- Update merchant balance immediately (demo)
+              _ <- liftIO $ execute conn
+                "UPDATE merchants SET balance = balance + ? WHERE merchant_id = ?"
+                (amt, merchantId merchant)
+
+              -- Update payment status to "Success"
+              _ <- liftIO $ execute conn
+                "UPDATE payments SET status = ? WHERE merchant_id = ? AND amount = ? AND created_at = ?"
+                ("Success" :: Text, merchantId merchant, amt, currentTime)
+
+              -- Fetch updated balance
+              results <- liftIO $ query conn
+                "SELECT balance FROM merchants WHERE merchant_id = ?"
+                (Only $ merchantId merchant)
+
+              case results of
+                [Only newBalance] -> return $ PaymentResponse
+                  { paymentStatus = "Success"
+                  , newBalance = newBalance
+                  }
+                _ -> throwError err500 { errBody = "Failed to fetch updated balance." }
+
+            _ -> throwError err401 { errBody = "Invalid API key." }
+
+-- | Servant API type: Accept API key header plus payment request body
+type PaymentAPI =
+  "payments" :> Header "X-API-KEY" Text :> ReqBody '[JSON] PaymentRequest :> Post '[JSON] PaymentResponse
+
+paymentServer :: ServerT PaymentAPI App
+paymentServer = paymentHandler

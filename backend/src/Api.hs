@@ -1,4 +1,3 @@
--- src/Api.hs
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -9,39 +8,60 @@ module Api (api, server) where
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
 import Servant
-import Servant.Auth.Server (AuthResult, Auth, Cookie)
+import Servant.Auth.Server (AuthResult)
 import Web.Cookie (SetCookie)
+import Data.Text (Text)
 
 import App (App)
 import Auth (AuthMiddleware)
 import Handlers.AuthHandler (registerHandler, loginHandler)
 import Handlers.AccountHandler (balanceHandler)
 import Handlers.PaymentHandler (paymentServer)
-import Handlers.UserHandler (userServer)
-import Models.User
-    ( RegistrationRequest, LoginRequest, PublicUser, BalanceResponse, User )
+import Handlers.MerchantHandler (merchantServer)
+-- no UserHandler import now
+
+import Models.Merchant
+  ( RegistrationRequest
+  , LoginRequest
+  , PublicMerchant
+  , BalanceResponse
+  )
 import Models.Payment (PaymentRequest, PaymentResponse)
 
--- | Public routes that do not require authentication.
+-- | API endpoint for processing payments.
+type PaymentAPI = 
+  Header "X-API-Key" Text :> "payments" :> ReqBody '[JSON] PaymentRequest :> Post '[JSON] PaymentResponse
+
+-- | Public routes 
 type PublicAPI =
-       "register" :> ReqBody '[JSON] RegistrationRequest :> Post '[JSON] PublicUser
-  -- Corrected the type to expect two Set-Cookie headers
+       "register" :> ReqBody '[JSON] RegistrationRequest :> Post '[JSON] PublicMerchant
   :<|> "login" :> ReqBody '[JSON] LoginRequest :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
+  :<|> PaymentAPI  -- Payment endpoint public (API key inside req body or header)
 
--- | Protected routes that require a valid JWT cookie.
-type ProtectedAPI =
-  Auth '[Cookie] User :> "account" :> "balance" :> Get '[JSON] BalanceResponse
+-- | Protected routes
+type ProtectedMerchantAPI =
+       AuthMiddleware :> "merchant" :> "balance" :> Get '[JSON] BalanceResponse
+  :<|> AuthMiddleware :> "merchant" :> "apikey" :> "generate" :> Post '[JSON] Text
 
--- | The complete API, combining public and protected routes.
+
+type ProtectedAPI = ProtectedMerchantAPI
+
+
 type API = PublicAPI :<|> ProtectedAPI
 
--- | API proxy.
+-- | API proxy
 api :: Proxy API
 api = Proxy
 
--- | Server combining all handlers.
+-- | Server
 server :: ServerT API App
 server = publicServer :<|> protectedServer
   where
-    publicServer = registerHandler :<|> loginHandler
-    protectedServer = balanceHandler
+    -- Public routes
+    publicServer = registerHandler :<|> loginHandler :<|> paymentServer
+
+    -- Protected merchant routes
+    protectedServer = merchantBalanceServer :<|> merchantApiKeyServer
+
+    merchantBalanceServer = balanceHandler
+    merchantApiKeyServer = merchantServer

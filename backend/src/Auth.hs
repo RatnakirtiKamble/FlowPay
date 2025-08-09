@@ -1,4 +1,3 @@
--- src/Auth.hs
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
@@ -12,11 +11,6 @@ import Servant.Auth.Server
       defaultJWTSettings, generateKey, Auth, JWT, Cookie )
 import Crypto.JOSE.JWK (JWK)
 
-import Models.User (User)
+import Models.Merchant (Merchant)
 
--- Note: The ToJWT and FromJWT instances for User are now correctly
--- defined in the Models.User module.
-
--- | Define the authentication scheme for our API.
--- | We are using a cookie-based JWT approach.
-type AuthMiddleware = Auth '[JWT, Cookie] User
+type AuthMiddleware = Auth '[JWT, Cookie] Merchant

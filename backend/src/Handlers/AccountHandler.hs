@@ -1,21 +1,17 @@
--- src/Handlers/AccountHandler.hs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Handlers.AccountHandler (balanceHandler) where
 
-import Servant (throwError, err401) -- Import error handling
+import Servant (throwError, err401)
 import Servant.Auth.Server (AuthResult(Authenticated))
 
 import App (App)
-import Models.User (User(..), BalanceResponse(..))
+import Models.Merchant (Merchant(..), BalanceResponse(..))
 
--- | Handles the balance check.
--- | The 'AuthResult User' is provided by the servant-auth middleware.
-balanceHandler :: AuthResult User -> App BalanceResponse
-balanceHandler (Authenticated user) = do
-  -- The user is already authenticated, so we can just use their data.
-  return $ BalanceResponse { currentBalance = userBalance user }
+-- | Handle balance check for authenticated merchant.
+balanceHandler :: AuthResult Merchant -> App BalanceResponse
+balanceHandler (Authenticated merchant) = do
+  return $ BalanceResponse { currentBalance = merchantBalance merchant }
 
--- If the request is not authenticated for any reason, throw a 401 error.
--- This is much safer than calling `error`.
+-- Unauthorized access returns 401
 balanceHandler _ = throwError err401

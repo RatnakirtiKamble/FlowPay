@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <div className="bg-black text-white flex flex-col items-center justify-center">
+    <div className="text-white flex flex-col items-center justify-center">
       <main className="flex flex-1 flex-col justify-center items-center text-center px-6">
         <h2 className="text-4xl font-bold mb-4">Seamless Payments, Scalable Systems</h2>
         <p className="text-gray-400 mb-8 max-w-lg">

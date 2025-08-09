@@ -30,6 +30,16 @@
   (major1) == 4 && (major2) <  18 || \
   (major1) == 4 && (major2) == 18 && (minor) <= 3)
 #endif /* MIN_VERSION_base */
+/* package base64-bytestring-1.2.1.0 */
+#ifndef VERSION_base64_bytestring
+#define VERSION_base64_bytestring "1.2.1.0"
+#endif /* VERSION_base64_bytestring */
+#ifndef MIN_VERSION_base64_bytestring
+#define MIN_VERSION_base64_bytestring(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  2 || \
+  (major1) == 1 && (major2) == 2 && (minor) <= 1)
+#endif /* MIN_VERSION_base64_bytestring */
 /* package bcrypt-0.0.11 */
 #ifndef VERSION_bcrypt
 #define VERSION_bcrypt "0.0.11"
@@ -60,6 +70,16 @@
   (major1) == 0 && (major2) <  5 || \
   (major1) == 0 && (major2) == 5 && (minor) <= 1)
 #endif /* MIN_VERSION_cookie */
+/* package crypton-1.0.4 */
+#ifndef VERSION_crypton
+#define VERSION_crypton "1.0.4"
+#endif /* VERSION_crypton */
+#ifndef MIN_VERSION_crypton
+#define MIN_VERSION_crypton(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  0 || \
+  (major1) == 1 && (major2) == 0 && (minor) <= 4)
+#endif /* MIN_VERSION_crypton */
 /* package jose-0.11 */
 #ifndef VERSION_jose
 #define VERSION_jose "0.11"
@@ -160,6 +180,16 @@
   (major1) == 3 && (major2) <  2 || \
   (major1) == 3 && (major2) == 2 && (minor) <= 4)
 #endif /* MIN_VERSION_wai */
+/* package wai-cors-0.2.7 */
+#ifndef VERSION_wai_cors
+#define VERSION_wai_cors "0.2.7"
+#endif /* VERSION_wai_cors */
+#ifndef MIN_VERSION_wai_cors
+#define MIN_VERSION_wai_cors(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  2 || \
+  (major1) == 0 && (major2) == 2 && (minor) <= 7)
+#endif /* MIN_VERSION_wai_cors */
 /* package wai-extra-3.1.17 */
 #ifndef VERSION_wai_extra
 #define VERSION_wai_extra "3.1.17"

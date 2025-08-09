@@ -22,7 +22,10 @@ executable payment-engine
                        servant-auth-server,
                        wai-extra,
                        jose-jwt,
-                       jose
+                       jose,
+                       crypton, 
+                       base64-bytestring,
+                       wai-cors
 
   default-language:    Haskell2010
   other-modules: 
@@ -30,9 +33,9 @@ executable payment-engine
     DB.Init
     DB.Schema
     Handlers.PaymentHandler
-    Handlers.UserHandler
+    Handlers.MerchantHandler
     Models.Payment
-    Models.User
+    Models.Merchant
     Utils.Logger
     Utils.Retry
     App
