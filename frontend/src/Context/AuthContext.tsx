@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, type ReactNode } from "react";
+import { createContext, useState, useEffect, useContext, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Helper function to read a specific cookie
