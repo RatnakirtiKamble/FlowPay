@@ -1,4 +1,3 @@
-
 FROM haskell:9.4.8 as builder
 
 WORKDIR /app
@@ -17,19 +16,18 @@ RUN stack build --only-dependencies
 
 COPY . .
 
-.
 RUN stack build --copy-bins --local-bin-path /app/bin
 
 FROM debian:bookworm-slim
 
 WORKDIR /app
 
+
 RUN apt-get update && apt-get install -y \
     libpq5 \
     libtinfo6 \
     libgmp10 \
     && rm -rf /var/lib/apt/lists/*
-
 
 COPY --from=builder /app/bin/payment-engine-exe .
 
