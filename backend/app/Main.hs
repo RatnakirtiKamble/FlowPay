@@ -36,6 +36,9 @@ import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors
 import Servant
 import Servant.Auth.Server
+import qualified Servant.Auth.Server as SAS
+
+
 
 -- Logging Imports
 import Control.Monad.Logger (runLoggingT, fromLogStr, Loc(..), LogLevel(..), LogSource, LogStr)
@@ -105,7 +108,10 @@ main = do
 
     -- Setup JWT and cookie settings
     let jwtSettings = defaultJWTSettings key
-    let cookieSettings = defaultCookieSettings { cookieIsSecure = NotSecure }
+    let cookieSettings = SAS.defaultCookieSettings
+          { SAS.cookieIsSecure = SAS.Secure
+          , SAS.cookieSameSite = SAS.SameSiteLax
+          }
 
     -- Create app environment
     let env = AppEnv
