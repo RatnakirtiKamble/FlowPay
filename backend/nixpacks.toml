@@ -1,2 +1,2 @@
 [phases.setup]
-nixPkgs = ["...", "ncurses", "zlib", "gmp", "postgresql", "pkg-config", "openssl"]
+nixPkgs = ["...", "make", "gcc", "ncurses", "zlib", "gmp", "postgresql", "pkg-config", "openssl"]
