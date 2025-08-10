@@ -1,5 +1,9 @@
-
+# File: backend/nixpacks.toml
 
 [phases.setup]
-
+# List all required system libraries for the build
 nixPkgs = ["make", "gcc", "ncurses", "zlib", "gmp", "postgresql", "pkg-config", "openssl"]
+
+[start]
+# Explicitly define the start command
+cmd = "stack exec payment-engine-exe"
