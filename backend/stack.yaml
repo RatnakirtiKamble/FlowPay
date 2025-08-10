@@ -1,0 +1,6 @@
+# File: stack.yaml
+
+# LTS 22 uses a GHC version compatible with your base library dependency.
+resolver: lts-22.7
+
+allow-newer: true

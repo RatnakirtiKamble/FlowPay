@@ -40,7 +40,8 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick, onSignupClick }) =
       </button>
       <nav className="space-x-6 text-xl">
       <button
-          className="hover:text-blue-500">
+          className="hover:text-blue-500"
+          onClick={() => navigate("/docs")}>
           Docs
         </button>
         { user ? (
