@@ -24,8 +24,6 @@ dependencies:
   - bcrypt
   - cookie
   - servant-auth-server
-  - wai-extra
-  - jose-jwt
   - jose
   - crypton
   - base64-bytestring

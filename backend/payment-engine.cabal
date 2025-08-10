@@ -39,7 +39,6 @@ executable payment-engine-exe
     , dotenv >=0.7
     , http-types
     , jose
-    , jose-jwt
     , monad-logger
     , mtl
     , postgresql-simple
@@ -50,6 +49,5 @@ executable payment-engine-exe
     , time
     , wai
     , wai-cors >=0.2.7
-    , wai-extra
     , warp
   default-language: Haskell2010
