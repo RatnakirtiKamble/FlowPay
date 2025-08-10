@@ -14,4 +14,4 @@ RUN cabal build
 EXPOSE 8080
 
 # Run your app executable (replace `your-executable-name` with your actual binary name)
-CMD ["cabal", "run", "--", "+RTS", "-N", "-RTS"]
+CMD ["cabal", "run", "payment-engine", "+RTS", "-N", "-RTS"]
