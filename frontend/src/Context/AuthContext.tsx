@@ -49,11 +49,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const refreshUser = async () => {
     try {
       const csrfToken = getCookie("XSRF-TOKEN");
-      const response = await fetch("http://localhost:8080/dashboard", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/dashboard`, {
         credentials: "include",
         headers: { "X-XSRF-TOKEN": csrfToken || "" },
       });
-
+      
       if (response.ok) {
         const dashboardData = await response.json();
         const loggedInUser: User = {

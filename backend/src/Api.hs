@@ -94,7 +94,6 @@ server = publicServer :<|> protectedServer
 
     merchantBalanceServer = balanceHandler
     merchantApiKeyServer = merchantServer
-    revokeApiKeyHandler = revokeApiKeyHandler
     logoutHandler = Handlers.AuthHandler.logoutHandler
     listPaymentsHandler = Handlers.MerchantHandler.listPaymentsHandler
 

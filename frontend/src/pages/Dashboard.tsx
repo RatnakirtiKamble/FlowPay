@@ -22,6 +22,7 @@ function getCookie(name: string): string | null {
 export default function Dashboard() {
   const { user, refreshUser } = useAuth();
   
+  const POLLING_INTERVAL = 5000; 
   // --- Component State ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
@@ -64,7 +65,7 @@ except Exception as e:
     setIsRevoking(true);
     try {
       const csrfToken = getCookie("XSRF-TOKEN");
-      const response = await fetch("http://localhost:8080/merchant/apikey/revoke", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/merchant/apikey/revoke`, {
         method: "POST",
         credentials: "include",
         headers: { "X-XSRF-TOKEN": csrfToken || "" },
@@ -83,7 +84,7 @@ except Exception as e:
     setIsGenerating(true);
     try {
       const csrfToken = getCookie("XSRF-TOKEN");
-      const response = await fetch("http://localhost:8080/merchant/apikey/generate", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/merchant/apikey/generate`, {
         method: "POST",
         credentials: "include",
         headers: { "X-XSRF-TOKEN": csrfToken || "" },
@@ -111,33 +112,49 @@ except Exception as e:
   }, []);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!user) return; 
+      // 1. Define the fetch function.
+      const fetchTransactions = async () => {
+        // The user check is important; don't fetch if the user isn't loaded.
+        if (!user) return; 
 
-      setTransactionsLoading(true);
-      try {
-        const csrfToken = getCookie("XSRF-TOKEN");
-        const response = await fetch("http://localhost:8080/merchant/payments", {
-          credentials: "include",
-          headers: {
-            "X-XSRF-TOKEN": csrfToken || "",
-          },
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch transactions.");
+        // Set loading state only for the initial load, not for background polls.
+        // This provides a smoother user experience.
+        // If you want a loading indicator for every poll, you can remove this check.
+        if (!transactions.length) {
+            setTransactionsLoading(true);
         }
-        const data: Transaction[] = await response.json();
-        setTransactions(data);
-      } catch (error) {
-        console.error("Error fetching transactions:", error);
-      } finally {
-        setTransactionsLoading(false);
-      }
-    };
+        
+        try {
+          const csrfToken = getCookie("XSRF-TOKEN");
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/merchant/payments`, {
+            credentials: "include",
+            headers: {
+              "X-XSRF-TOKEN": csrfToken || "",
+            },
+          });
+          if (!response.ok) {
+            throw new Error("Failed to fetch transactions.");
+          }
+          const data: Transaction[] = await response.json();
+          setTransactions(data);
+        } catch (error) {
+          console.error("Error fetching transactions:", error);
+        } finally {
+          setTransactionsLoading(false);
+        }
+      };
 
-    fetchTransactions();
-  }, [user]);
+      // 2. Fetch data immediately when the component mounts (or user changes).
+      fetchTransactions();
 
+      // 3. Set up the interval to poll for new data every 5 seconds.
+      const intervalId = setInterval(fetchTransactions, POLLING_INTERVAL);
+
+      // 4. IMPORTANT: Clean up the interval when the component unmounts.
+      // This prevents memory leaks and stops the polling when the user navigates away.
+      return () => clearInterval(intervalId);
+
+  }, [user]); // The 
   if (!user) {
     return null; 
   }

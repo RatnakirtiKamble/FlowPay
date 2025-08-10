@@ -43,7 +43,7 @@ import Models.Payment (Payment)
 
 -- | Response type containing the plaintext API key after generation.
 newtype ApiKeyResponse = ApiKeyResponse
-  { apiKey :: Text -- ^ The newly generated API key (plaintext, not hashed).
+  { apiKey :: Text 
   } deriving (Generic)
 
 instance ToJSON ApiKeyResponse

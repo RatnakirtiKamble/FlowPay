@@ -41,7 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (isSignup) {
-        const registerRes = await fetch("http://localhost:8080/register", {
+        const registerRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

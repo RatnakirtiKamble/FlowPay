@@ -53,7 +53,7 @@ export default function DemoMerchantSite() {
         setPayingProductId(product.id);
 
         try {
-        const res = await fetch("http://localhost:8080/payments", {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/payments`, {
             method: "POST",
             headers: {
             "Content-Type": "application/json",

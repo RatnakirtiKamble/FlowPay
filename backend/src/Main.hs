@@ -69,7 +69,7 @@ logToFile path _ _ level msg = do
 corsWithCredentials :: Middleware
 corsWithCredentials = cors $ const $ Just $
     simpleCorsResourcePolicy
-        { corsOrigins        = Just (["http://localhost:5173"], True)
+        { corsOrigins        = Just (["https://flowpayratna.netlify.app", "http://localhost:5173"], True)
         , corsMethods        = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
         , corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token"]
         }

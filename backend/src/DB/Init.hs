@@ -1,4 +1,3 @@
--- src/DB/Init.hs
 {-# LANGUAGE OverloadedStrings #-}
 
 module DB.Init (getDBConnection) where
@@ -6,7 +5,9 @@ module DB.Init (getDBConnection) where
 import Database.PostgreSQL.Simple (Connection, connect, defaultConnectInfo, connectHost, connectUser, connectPassword, connectDatabase)
 import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
--- | Creates and returns a new connection to the PostgreSQL database.
+import Control.Monad (void)
+
+-- | Creates and returns a new connection to the PostgreSQL database
 getDBConnection :: IO Connection
 getDBConnection = do 
     host <- fromMaybe "localhost" <$> lookupEnv "PGHOST"
