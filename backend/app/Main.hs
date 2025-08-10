@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 -- |
 -- Module      : Main
@@ -18,34 +19,35 @@
 module Main where
 
 -- Base Imports
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (runReaderT)
-import Control.Monad.Except (runExceptT)
-import Crypto.JOSE.JWK (JWK)
-import Data.Text (Text, pack)
-import qualified Data.Text.IO as TIO
-import Data.Time (getCurrentTime, formatTime, defaultTimeLocale)
-import Data.Text.Encoding (decodeUtf8)
-import Data.Maybe (fromMaybe)
-import Text.Read (readMaybe)
-import System.Environment (lookupEnv)
 
 -- Servant & Wai Imports
+
+-- Logging Imports
+
+-- Internal Project Imports
+import Api (api, server)
+import App (App (..), AppEnv (..))
+import Control.Monad.Except (runExceptT)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Logger (Loc (..), LogLevel (..), LogSource, LogStr, fromLogStr, runLoggingT)
+import Control.Monad.Reader (runReaderT)
+import Crypto.JOSE.JWK (JWK)
+import DB.Init (getDBConnection)
+import DB.Schema (createTables)
+import Data.Maybe (fromMaybe)
+import Data.Text (Text, pack)
+import Data.Text.Encoding (decodeUtf8)
+import Data.Text.IO qualified as TIO
+import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import Network.Wai (Middleware)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors
 import Servant
 import Servant.Auth.Server
 import qualified Servant.Auth.Server as SAS
-
--- Logging Imports
-import Control.Monad.Logger (runLoggingT, fromLogStr, Loc(..), LogLevel(..), LogSource, LogStr)
-
--- Internal Project Imports
-import Api (api, server)
-import App (App(..), AppEnv(..))
-import DB.Init (getDBConnection)
-import DB.Schema (createTables)
+import System.Environment (lookupEnv)
+import Text.Read (readMaybe)
+import Web.Cookie(sameSiteNone)
 
 -- | Natural transformation from the application monad 'App' to Servant's 'Handler'.
 --
@@ -60,7 +62,7 @@ nt env app = do
   result <- liftIO . runLoggingT (runExceptT (runReaderT (runApp app) env)) $ loggingAction
   case result of
     Left err -> throwError err
-    Right a  -> return a
+    Right a -> return a
 
 -- | Logging action that writes log messages to a specified file,
 -- prefixed with a timestamp and the log level.
@@ -72,12 +74,15 @@ logToFile path _ _ level msg = do
 -- | CORS middleware allowing requests from the frontend dev server at localhost:5173,
 -- enabling credentials and common HTTP methods and headers needed for authentication.
 corsWithCredentials :: Middleware
-corsWithCredentials = cors $ const $ Just $
-    simpleCorsResourcePolicy
-        { corsOrigins        = Just (["https://flowpayratna.netlify.app", "http://localhost:5173"], True)
-        , corsMethods        = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-        , corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token"]
-        }
+corsWithCredentials =
+  cors $
+    const $
+      Just $
+        simpleCorsResourcePolicy
+          { corsOrigins = Just (["https://flowpayratna.netlify.app", "http://localhost:5173"], True),
+            corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token"]
+          }
 
 -- | Main application entry point.
 --
@@ -91,43 +96,45 @@ corsWithCredentials = cors $ const $ Just $
 -- 7. Runs the Warp server with CORS enabled on the specified port.
 main :: IO ()
 main = do
-    -- 1. Read port from environment variable, default to 8080 for local dev
-    portStr <- lookupEnv "PORT"
-    let port = fromMaybe 8080 (portStr >>= readMaybe)
+  -- 1. Read port from environment variable, default to 8080 for local dev
+  portStr <- lookupEnv "PORT"
+  let port = fromMaybe 8080 (portStr >>= readMaybe)
 
-    -- Generate key for JWT signing
-    key <- generateKey
+  -- Generate key for JWT signing
+  key <- generateKey
 
-    -- Setup database connection and create tables
-    putStrLn "Initializing PostgreSQL connection..."
-    conn <- getDBConnection
-    putStrLn "Connection successful."
-    createTables conn
+  -- Setup database connection and create tables
+  putStrLn "Initializing PostgreSQL connection..."
+  conn <- getDBConnection
+  putStrLn "Connection successful."
+  createTables conn
 
-    -- Setup JWT and cookie settings
-    let jwtSettings = defaultJWTSettings key
-    
-    -- For cross-domain, we need to disable cookies and rely on JWT headers instead
-    let cookieSettings = SAS.defaultCookieSettings
-          { SAS.cookieIsSecure = SAS.Secure
-          -- Remove cookieSameSite to avoid the issue
-          -- For cross-domain, consider using JWT in Authorization headers instead
+  -- Setup JWT and cookie settings
+  let jwtSettings = defaultJWTSettings key
+
+  let cookieSettings =
+        SAS.defaultCookieSettings
+          { SAS.cookieIsSecure = SAS.Secure,
+            SAS.cookieSameSite = SAS.AnySite
           }
 
-    -- Create app environment
-    let env = AppEnv
-          { dbConnection = conn
-          , cookieCfg = cookieSettings
-          , jwtCfg = jwtSettings
+  -- Create app environment
+  let env =
+        AppEnv
+          { dbConnection = conn,
+            cookieCfg = cookieSettings,
+            jwtCfg = jwtSettings
           }
 
-    -- Compose Servant authentication context
-    let context = cookieSettings :. jwtSettings :. EmptyContext
+  -- Compose Servant authentication context
+  let context = cookieSettings :. jwtSettings :. EmptyContext
 
-    -- Build WAI application with auth context and natural transformation
-    let appWai =
-          serveWithContext api context
-              (hoistServerWithContext api (Proxy :: Proxy '[CookieSettings, JWTSettings]) (nt env) server)
+  -- Build WAI application with auth context and natural transformation
+  let appWai =
+        serveWithContext
+          api
+          context
+          (hoistServerWithContext api (Proxy :: Proxy '[CookieSettings, JWTSettings]) (nt env) server)
 
-    putStrLn $ "Starting backend on port " ++ show port ++ " with CORS and credentials..."
-    run port $ corsWithCredentials appWai
+  putStrLn $ "Starting backend on port " ++ show port ++ " with CORS and credentials..."
+  run port $ corsWithCredentials appWai

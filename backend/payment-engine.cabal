@@ -34,7 +34,7 @@ executable payment-engine-exe
     , base64-bytestring
     , bcrypt
     , bytestring
-    , cookie
+    , cookie >=0.4.5
     , crypton
     , dotenv >=0.7
     , http-types

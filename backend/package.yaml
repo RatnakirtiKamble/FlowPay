@@ -22,7 +22,7 @@ dependencies:
   - time
   - wai
   - bcrypt
-  - cookie
+  - cookie >= 0.4.5
   - servant-auth-server
   - jose
   - crypton
