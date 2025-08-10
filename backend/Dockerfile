@@ -1,5 +1,5 @@
 # Use an official Haskell image with GHC and Cabal installed
-FROM haskell:8.10
+FROM haskell:9.4
 
 WORKDIR /app
 
