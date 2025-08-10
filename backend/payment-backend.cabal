@@ -25,7 +25,9 @@ executable payment-engine
                        jose,
                        crypton, 
                        base64-bytestring,
-                       wai-cors
+                       wai-cors >= 0.2.7,
+                       http-types,
+                       monad-logger  
 
   default-language:    Haskell2010
   other-modules: 
@@ -36,7 +38,5 @@ executable payment-engine
     Handlers.MerchantHandler
     Models.Payment
     Models.Merchant
-    Utils.Logger
-    Utils.Retry
     App
     Auth

@@ -10,7 +10,8 @@ import Control.Monad.Error.Class (MonadError)
 import Database.PostgreSQL.Simple (Connection)
 import Servant (Handler, ServerError)
 import Servant.Auth.Server (CookieSettings, JWTSettings)
-
+import Control.Monad.Logger (LoggingT, MonadLogger)
+import Control.Monad.Except (ExceptT, MonadError)
 -- | The environment for the application, containing the database connection and settings for cookies and JWT.
 data AppEnv = AppEnv
   { dbConnection :: Connection
@@ -18,7 +19,7 @@ data AppEnv = AppEnv
   , jwtCfg       :: JWTSettings
   }
 
-newtype App a = App { runApp :: ReaderT AppEnv Handler a }
+newtype App a = App { runApp :: ReaderT AppEnv (ExceptT ServerError (LoggingT IO)) a }
   deriving (
     Functor,
     Applicative,
@@ -26,5 +27,6 @@ newtype App a = App { runApp :: ReaderT AppEnv Handler a }
     MonadReader AppEnv,
     MonadIO,
     MonadError ServerError,
-    MonadFail
+    MonadFail,
+    MonadLogger 
   )

@@ -14,7 +14,7 @@ createTables conn = do
       \  name TEXT NOT NULL,\
       \  email TEXT UNIQUE NOT NULL,\
       \  password_hash TEXT NOT NULL,\
-      \  api_key TEXT UNIQUE NOT NULL,\
+      \  api_key TEXT UNIQUE,\
       \  balance DOUBLE PRECISION DEFAULT 0\
       \);"
 
@@ -25,8 +25,8 @@ createTables conn = do
       \  merchant_id INTEGER REFERENCES merchants(merchant_id),\
       \  amount DOUBLE PRECISION,\
       \  status TEXT DEFAULT 'PENDING',\
-      \  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\
-      \  processed_at TIMESTAMP\
+      \  created_at TIMESTAMPTZ DEFAULT NOW(),\
+      \  processed_at TIMESTAMPTZ\
       \);"
     putStrLn "Schema is ready."
 

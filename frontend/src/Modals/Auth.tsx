@@ -1,53 +1,34 @@
 import React, { useState, type FormEvent, type MouseEvent } from "react";
+import { useAuth } from "../Context/AuthContext"; // Import the hook
 
 export type AuthMode = "login" | "signup";
 
 interface AuthModalProps {
-    mode: AuthMode;
-    onClose: () => void;
-    onLoginSuccess: (email: string) => void;
-    onModeChange: (mode: AuthMode) => void;
-  }
-  
-
-interface RegisterRequest {
-  reqName: string;
-  reqEmail: string;
-  reqPassword: string;
+  mode: AuthMode;
+  onClose: () => void;
+  onModeChange: (mode: AuthMode) => void;
 }
 
-interface LoginRequest {
-  loginEmail: string;
-  loginPassword: string;
-}
 
-export const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onLoginSuccess, onModeChange }) => {
-  const [name, setName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
+
+export const AuthModal: React.FC<AuthModalProps> = ({
+  mode,
+  onClose,
+  onModeChange,
+}) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+
+  // Get the login function from our central context
+  const { login } = useAuth();
 
   const isSignup = mode === "signup";
 
-  const loginUser = async (email: string, password: string): Promise<void> => {
-    const res = await fetch("http://localhost:8080/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ loginEmail: email, loginPassword: password } as LoginRequest),
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || "Login failed");
-    }
-    console.log(email)
-    onLoginSuccess(email);
-  };
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -60,32 +41,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onLoginSucc
 
     try {
       if (isSignup) {
-        const registerBody: RegisterRequest = {
-          reqName: name,
-          reqEmail: email,
-          reqPassword: password,
-        };
-
-        const res = await fetch("http://localhost:8080/register", {
+        // NOTE: The actual registration fetch would still happen here.
+        // After a successful registration, you then log the user in.
+        const registerRes = await fetch("http://localhost:8080/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(registerBody),
+          body: JSON.stringify({
+            reqName: name,
+            reqEmail: email,
+            reqPassword: password,
+          }),
         });
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.message || "Registration failed");
+        if (!registerRes.ok) {
+            const errorData = await registerRes.json().catch(() => ({}));
+            throw new Error(errorData.message || "Registration failed.");
         }
+        
+        // After successful registration, log the user in using the context function
+        await login(email, password);
 
-        // Auto login after successful registration
-        await loginUser(email, password);
       } else {
-        await loginUser(email, password);
+        // For login, just call the function from the context
+        await login(email, password);
       }
 
       setLoading(false);
-      onClose();
+      onClose(); // Close the modal on success
     } catch (err) {
       setError((err as Error).message);
       setLoading(false);
@@ -103,7 +85,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onLoginSucc
         className="bg-white rounded-lg p-8 w-96 relative"
         onClick={stopPropagation}
       >
-        <h2 className="text-2xl mb-4 text-blue-500 font-medium">{isSignup ? "Sign Up" : "Log In"}</h2>
+        <h2 className="text-2xl mb-4 text-blue-500 font-medium">
+          {isSignup ? "Sign Up" : "Log In"}
+        </h2>
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
           {isSignup && (
             <input
@@ -142,7 +126,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onLoginSucc
             />
           )}
           {error && <p className="text-red-500">{error}</p>}
-          <button className="text-blue-500 text-sm" onClick={() => onModeChange(isSignup ? "login" : "signup")}>
+          <button
+            className="text-blue-500 text-sm"
+            type="button"
+            onClick={() => onModeChange(isSignup ? "login" : "signup")}
+          >
             {isSignup
               ? "Already have an account? Log in instead."
               : "Don't have an account? Sign up now!"}

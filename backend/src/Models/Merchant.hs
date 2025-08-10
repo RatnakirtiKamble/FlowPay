@@ -6,7 +6,9 @@ module Models.Merchant where
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=), (.:), Value(Object))
 import Data.Text (Text)
-import Database.PostgreSQL.Simple (FromRow, ToRow)
+import Data.Maybe (isJust)
+import Database.PostgreSQL.Simple (ToRow) 
+import Database.PostgreSQL.Simple.FromRow (FromRow(fromRow), field)
 import Servant.Auth.Server (ToJWT, FromJWT)
 
 data Merchant = Merchant
@@ -14,7 +16,7 @@ data Merchant = Merchant
   , merchantName         :: Text
   , merchantEmail        :: Text
   , merchantPasswordHash :: Text 
-  , merchantApiKey       :: Text 
+  , merchantApiKey       :: Maybe Text 
   , merchantBalance      :: Double
   } deriving (Eq, Show, Generic)
 
@@ -32,14 +34,15 @@ instance FromJSON Merchant where
     <*> v .: "merchantName"
     <*> v .: "merchantEmail"
     <*> pure ""    
-    <*> pure ""    
+    <*> pure Nothing
     <*> v .: "merchantBalance"
   parseJSON _ = mempty
 
 instance ToJWT Merchant
 instance FromJWT Merchant
 
-instance FromRow Merchant
+instance FromRow Merchant where
+  fromRow = Merchant <$> field <*> field <*> field <*> field <*> field <*> field
 instance ToRow Merchant
 
 data PublicMerchant = PublicMerchant
@@ -47,17 +50,20 @@ data PublicMerchant = PublicMerchant
   , publicMerchantName    :: Text
   , publicMerchantEmail   :: Text
   , publicMerchantBalance :: Double
+  , publicMerchantApiKeyExists :: Bool
   } deriving (Eq, Show, Generic)
 
 instance ToJSON PublicMerchant
 
 toPublicMerchant :: Merchant -> PublicMerchant
-toPublicMerchant m = PublicMerchant
-  { publicMerchantId = merchantId m
-  , publicMerchantName = merchantName m
-  , publicMerchantEmail = merchantEmail m
-  , publicMerchantBalance = merchantBalance m
-  }
+toPublicMerchant merchant =
+  PublicMerchant
+    { publicMerchantId    = merchantId merchant
+    , publicMerchantName  = merchantName merchant
+    , publicMerchantEmail = merchantEmail merchant
+    , publicMerchantBalance = merchantBalance merchant
+    , publicMerchantApiKeyExists = isJust (merchantApiKey merchant)
+    }
 
 data RegistrationRequest = RegistrationRequest
   { reqName     :: Text
