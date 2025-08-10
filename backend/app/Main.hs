@@ -38,8 +38,6 @@ import Servant
 import Servant.Auth.Server
 import qualified Servant.Auth.Server as SAS
 
-
-
 -- Logging Imports
 import Control.Monad.Logger (runLoggingT, fromLogStr, Loc(..), LogLevel(..), LogSource, LogStr)
 
@@ -108,9 +106,12 @@ main = do
 
     -- Setup JWT and cookie settings
     let jwtSettings = defaultJWTSettings key
+    
+    -- For cross-domain, we need to disable cookies and rely on JWT headers instead
     let cookieSettings = SAS.defaultCookieSettings
           { SAS.cookieIsSecure = SAS.Secure
-          , SAS.cookieSameSite = SAS.SameSiteLax
+          -- Remove cookieSameSite to avoid the issue
+          -- For cross-domain, consider using JWT in Authorization headers instead
           }
 
     -- Create app environment
