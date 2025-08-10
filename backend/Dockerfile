@@ -1,6 +1,6 @@
 # --- Stage 1: The Builder ---
-# Use a more stable, slim base image to avoid package manager issues.
-FROM haskell:9.4.8-slim-bullseye as builder
+# Use a valid, official slim base image.
+FROM haskell:9.4.8-slim as builder
 
 # Set the working directory inside the container
 WORKDIR /app
