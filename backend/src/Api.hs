@@ -26,7 +26,7 @@ import Data.Text (Text)
 
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
-import Database.PostgreSQL.Simple (query)
+import Database.PostgreSQL.Simple (query, Only(..))
 
 import App (App, AppEnv(..))
 import Auth (AuthMiddleware)
@@ -103,6 +103,10 @@ server = publicServer :<|> protectedServer
       let mId = merchantId merchant
       conn <- asks dbConnection
       let sqlQuery = "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE merchant_id = ?"
-      [freshMerchant] <- liftIO $ query conn sqlQuery [mId]
-      return $ toPublicMerchant freshMerchant
+
+      merchants <- liftIO $ query conn sqlQuery (Only mId)
+      case merchants of
+        []    -> throwError err404 { errBody = "Authenticated merchant not found in database." }
+        (m:_) -> return $ toPublicMerchant m 
+
     dashboardServer _ = throwError err401
