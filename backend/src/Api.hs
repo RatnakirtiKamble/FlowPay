@@ -3,6 +3,18 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Api
+-- Description : Defines the Servant API type and server implementation.
+--
+-- This module exposes the complete API type for the application, including:
+--  * Public routes: registration, login, and payment processing
+--  * Protected routes: merchant balance, API key management, logout,
+--    payments listing, and merchant dashboard
+--
+-- The API uses authentication middleware to protect sensitive endpoints.
+-- The server implementation wires up all handlers imported from the Handlers modules.
+--
 module Api (api, server) where
 
 import Data.Aeson (ToJSON)
@@ -10,7 +22,7 @@ import GHC.Generics (Generic)
 import Servant
 import Servant.Auth.Server (AuthResult(..))
 import Web.Cookie (SetCookie)
-import Data.Text (Text) -- <-- THIS IS THE FIX: Add this import back.
+import Data.Text (Text)
 
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
@@ -38,13 +50,13 @@ import Models.Payment (Payment, PaymentRequest, PaymentResponse)
 type PaymentAPI =
   Header "X-API-Key" Text :> "payments" :> ReqBody '[JSON] PaymentRequest :> Post '[JSON] PaymentResponse
 
--- | Public routes
+-- | Public API routes available without authentication.
 type PublicAPI =
        "register" :> ReqBody '[JSON] RegistrationRequest :> Post '[JSON] PublicMerchant
   :<|> "login" :> ReqBody '[JSON] LoginRequest :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
   :<|> PaymentAPI
 
--- | Protected routes
+-- | Protected API routes requiring authentication via 'AuthMiddleware'.
 type ProtectedMerchantAPI =
        AuthMiddleware :> "merchant" :> "balance" :> Get '[JSON] BalanceResponse
   :<|> AuthMiddleware :> "merchant" :> "apikey" :> "generate" :> Post '[JSON] ApiKeyResponse
@@ -55,31 +67,38 @@ type ProtectedMerchantAPI =
 
 type ProtectedAPI = ProtectedMerchantAPI
 
+-- | Complete API type combining public and protected routes.
 type API = PublicAPI :<|> ProtectedAPI
 
--- | API proxy
+-- | Proxy for the API type.
 api :: Proxy API
 api = Proxy
 
--- | Server
+-- | Server implementation for the full API.
+--
+-- Combines the public and protected servers by wiring up all handler functions.
 server :: ServerT API App
 server = publicServer :<|> protectedServer
   where
+    -- Public endpoints
     publicServer = registerHandler :<|> loginHandler :<|> paymentServer
-    protectedServer = merchantBalanceServer 
-                    :<|> merchantApiKeyServer 
-                    :<|> revokeApiKeyHandler
-                    :<|> logoutHandler
-                    :<|> listPaymentsHandler
-                    :<|> dashboardServer
-                    
+
+    -- Protected endpoints
+    protectedServer =
+             merchantBalanceServer
+        :<|> merchantApiKeyServer
+        :<|> revokeApiKeyHandler
+        :<|> logoutHandler
+        :<|> listPaymentsHandler
+        :<|> dashboardServer
 
     merchantBalanceServer = balanceHandler
     merchantApiKeyServer = merchantServer
-    revokeApiKeyServer= revokeApiKeyHandler
-    logoutHandler = Handlers.AuthHandler.logoutHandler 
+    revokeApiKeyHandler = revokeApiKeyHandler
+    logoutHandler = Handlers.AuthHandler.logoutHandler
     listPaymentsHandler = Handlers.MerchantHandler.listPaymentsHandler
 
+    -- | Returns fresh public merchant details for the authenticated merchant.
     dashboardServer :: AuthResult Merchant -> App PublicMerchant
     dashboardServer (Authenticated merchant) = do
       let mId = merchantId merchant

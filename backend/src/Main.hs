@@ -2,9 +2,18 @@
 {-# LANGUAGE DataKinds #-}
 
 -- |
--- This module serves as the main entry point for the backend server.
--- It initializes the database connection, sets up the application environment,
--- configures CORS and JWT/Cookie settings, and launches the Warp server.
+-- Module      : Main
+-- Description : Main entry point for the backend server.
+--
+-- This module initializes the application environment, including:
+--  * Database connection and schema setup
+--  * JWT signing key generation and cookie configuration
+--  * CORS policy allowing requests from the frontend development server
+--  * Logging setup with timestamps to a file
+--  * Starts the Warp server on port 8080 serving the Servant API with authentication
+--
+-- The application monad 'App' is converted to Servant's 'Handler' monad via the natural
+-- transformation 'nt', which runs the monad transformer stack (ReaderT, ExceptT, LoggingT).
 module Main where
 
 -- Base Imports
@@ -15,7 +24,7 @@ import Crypto.JOSE.JWK (JWK)
 import Data.Text (Text, pack)
 import qualified Data.Text.IO as TIO
 import Data.Time (getCurrentTime, formatTime, defaultTimeLocale)
-import Data.Text.Encoding (decodeUtf8) -- 1. Import the decoder
+import Data.Text.Encoding (decodeUtf8)
 
 -- Servant & Wai Imports
 import Network.Wai (Middleware)
@@ -33,36 +42,30 @@ import App (App(..), AppEnv(..))
 import DB.Init (getDBConnection)
 import DB.Schema (createTables)
 
--- |
--- The Natural Transformation (nt) function.
--- This is the crucial bridge that converts our custom 'App' monad into Servant's 'Handler' monad.
--- It "runs" the entire monad stack (ReaderT, ExceptT, LoggingT) for each request.
+-- | Natural transformation from the application monad 'App' to Servant's 'Handler'.
+--
+-- Runs the monad transformer stack: ReaderT for environment,
+-- ExceptT for error handling, LoggingT for structured logging,
+-- lifting the final IO action into the Servant 'Handler' monad.
+--
+-- Logs all messages to a file ("app.log") with timestamps and log levels.
 nt :: AppEnv -> App a -> Handler a
 nt env app = do
   let loggingAction = logToFile "app.log"
-  -- Correctly run the monad stack from the inside out:
-  -- 1. Run the ReaderT with the environment.
-  -- 2. Run the ExceptT to handle potential errors.
-  -- 3. Run the LoggingT to perform the logging action.
-  -- 4. Lift the final IO action into the Handler monad.
   result <- liftIO . runLoggingT (runExceptT (runReaderT (runApp app) env)) $ loggingAction
   case result of
     Left err -> throwError err
     Right a  -> return a
 
--- |
--- A custom logging action that formats messages with a timestamp and level
--- before appending them to a specified file.
+-- | Logging action that writes log messages to a specified file,
+-- prefixed with a timestamp and the log level.
 logToFile :: FilePath -> Loc -> LogSource -> LogLevel -> LogStr -> IO ()
 logToFile path _ _ level msg = do
   timestamp <- pack . formatTime defaultTimeLocale "[%Y-%m-%d %H:%M:%S]" <$> getCurrentTime
-  -- 2. Convert the ByteString from the logger to Text before appending
   TIO.appendFile path $ timestamp <> " [" <> pack (show level) <> "] " <> decodeUtf8 (fromLogStr msg) <> "\n"
 
--- |
--- Defines the Cross-Origin Resource Sharing (CORS) policy for the server.
--- This policy allows requests from the frontend development server (localhost:5173)
--- and specifies which methods and headers are permitted.
+-- | CORS middleware allowing requests from the frontend dev server at localhost:5173,
+-- enabling credentials and common HTTP methods and headers needed for authentication.
 corsWithCredentials :: Middleware
 corsWithCredentials = cors $ const $ Just $
     simpleCorsResourcePolicy
@@ -71,34 +74,41 @@ corsWithCredentials = cors $ const $ Just $
         , corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token"]
         }
 
--- |
--- The main entry point of the application.
+-- | Main application entry point.
+--
+-- Performs the following steps:
+-- 1. Generates a cryptographic key for JWT signing.
+-- 2. Initializes the PostgreSQL connection and ensures database schema is created.
+-- 3. Sets up JWT and Cookie authentication settings.
+-- 4. Constructs the application environment.
+-- 5. Builds the WAI application serving the Servant API with authentication context.
+-- 6. Runs the Warp server with CORS enabled on port 8080.
 main :: IO ()
 main = do
-    -- Generate a key for signing JWTs
+    -- Generate key for JWT signing
     key <- generateKey
 
-    -- Initialize database connection and create tables
+    -- Setup database connection and create tables
     putStrLn "Initializing PostgreSQL connection..."
     conn <- getDBConnection
     putStrLn "Connection successful."
     createTables conn
 
-    -- Configure JWT and Cookie settings
+    -- Setup JWT and cookie settings
     let jwtSettings = defaultJWTSettings key
     let cookieSettings = defaultCookieSettings { cookieIsSecure = NotSecure }
 
-    -- Create the application environment
+    -- Create app environment
     let env = AppEnv
           { dbConnection = conn
           , cookieCfg = cookieSettings
           , jwtCfg = jwtSettings
           }
 
-    -- Define the context for servant-auth
+    -- Compose Servant authentication context
     let context = cookieSettings :. jwtSettings :. EmptyContext
 
-    -- Create the WAI application by serving the API
+    -- Build WAI application with auth context and natural transformation
     let appWai =
           serveWithContext api context
               (hoistServerWithContext api (Proxy :: Proxy '[CookieSettings, JWTSettings]) (nt env) server)

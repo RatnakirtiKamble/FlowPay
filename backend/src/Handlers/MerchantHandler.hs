@@ -1,6 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric     #-}
 
+-- |
+-- Module      : Handlers.MerchantHandler
+-- Description : Handlers related to merchant API key management and payment listing.
+--
+-- This module provides Servant handlers for:
+--  * Generating and updating a new API key for an authenticated merchant.
+--  * Revoking (clearing) the current API key.
+--  * Listing all payments made by the authenticated merchant.
+--
+-- API keys are securely generated as random 32-byte values, Base64 URL encoded,
+-- then hashed using bcrypt before being stored in the database.
+-- The plaintext API key is returned only once upon generation.
+--
+-- The handlers enforce authentication via 'Servant.Auth.Server.AuthResult' of 'Merchant'.
+-- Unauthorized access results in HTTP 401 responses.
+--
 module Handlers.MerchantHandler (
     merchantServer,
     revokeApiKeyHandler,
@@ -25,22 +41,29 @@ import App (App, dbConnection)
 import Models.Merchant (Merchant(..))
 import Models.Payment (Payment)
 
-data ApiKeyResponse = ApiKeyResponse
-  { apiKey :: Text
+-- | Response type containing the plaintext API key after generation.
+newtype ApiKeyResponse = ApiKeyResponse
+  { apiKey :: Text -- ^ The newly generated API key (plaintext, not hashed).
   } deriving (Generic)
 
 instance ToJSON ApiKeyResponse
 
--- Generate random API key (private helper)
+-- | Generates a random 32-byte API key, Base64 URL encoded.
 generateRandomApiKey :: IO Text
 generateRandomApiKey = do
   bytes <- getRandomBytes 32 
   pure $ decodeUtf8 $ encodeUnpadded bytes
 
+-- | Hashes the given API key text using bcrypt.
+--
+-- Returns 'Nothing' if hashing fails.
 hashApiKey :: Text -> IO (Maybe ByteString)
 hashApiKey keyText = hashPasswordUsingPolicy fastBcryptHashingPolicy (encodeUtf8 keyText)
 
--- Generate, hash, and update API key in DB
+-- | Generates a new API key, hashes it, updates it in the database for the given merchant,
+-- and returns the plaintext API key.
+--
+-- Throws HTTP 500 error if hashing fails.
 generateAndUpdateApiKey :: Int -> App ApiKeyResponse
 generateAndUpdateApiKey merchantId = do
   conn <- asks dbConnection
@@ -59,23 +82,33 @@ generateAndUpdateApiKey merchantId = do
 
       pure $ ApiKeyResponse { apiKey = plainTextKey }
       
--- The servant handler's type signature remains the same
+-- | Servant handler to generate and return a new API key for the authenticated merchant.
+--
+-- Returns HTTP 401 Unauthorized if authentication fails.
 merchantServer :: AuthResult Merchant -> App ApiKeyResponse
 merchantServer (Authenticated merchant) = generateAndUpdateApiKey (merchantId merchant)
 merchantServer _ = throwError err401
 
+-- | Handler to list all payments for the authenticated merchant.
+--
+-- Returns a list of 'Payment' records ordered by creation date descending.
+-- Returns HTTP 401 Unauthorized if authentication fails.
 listPaymentsHandler :: AuthResult Merchant -> App [Payment]
 listPaymentsHandler (Authenticated merchant) = do
   conn <- asks dbConnection
   let mId = merchantId merchant
   
-  -- Fetch all payments for the given merchant, ordered by most recent
   liftIO $ query conn
     "SELECT payment_id, merchant_id, amount, status, created_at FROM payments WHERE merchant_id = ? ORDER BY created_at DESC"
     (Only mId)
     
 listPaymentsHandler _ = throwError err401
 
+-- | Handler to revoke (delete) the current API key for the authenticated merchant.
+--
+-- Sets the 'api_key' field to NULL in the database.
+-- Returns HTTP 204 No Content on success.
+-- Returns HTTP 401 Unauthorized if authentication fails.
 revokeApiKeyHandler :: AuthResult Merchant -> App NoContent
 revokeApiKeyHandler (Authenticated merchant) = do
   conn <- asks dbConnection

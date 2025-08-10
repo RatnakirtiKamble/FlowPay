@@ -3,7 +3,7 @@ import Home from './pages/Home';
 import Layout from './Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './Components/ProtectedRoute';
-import { AuthProvider } from './Context/AuthContext'; // Import the provider
+import { AuthProvider } from './Context/AuthContext'; 
 import DocsPage from './pages/DocsPage';
 import DemoMerchantSite from './pages/Demo';
 

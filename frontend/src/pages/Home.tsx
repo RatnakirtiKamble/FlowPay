@@ -2,16 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 
 export default function Home() {
-  // Get the user object and the function to open the modal from the context
   const { user, openLoginModal } = useAuth();
   const navigate = useNavigate();
 
   const handleGetStartedClick = () => {
-    // If a user is logged in, navigate them to the dashboard
     if (user) {
       navigate("/dashboard");
     } else {
-      // Otherwise, call the function from the context to open the login modal
       openLoginModal();
     }
   };

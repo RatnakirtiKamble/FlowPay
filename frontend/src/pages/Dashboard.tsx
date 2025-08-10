@@ -2,13 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../Context/AuthContext";
 import { ApiKeyOverlay } from "../Modals/ApiKey";
 
-// 1. Update the Transaction interface to match the backend's Payment model
 interface Transaction {
   paymentId: number;
   merchantId: number;
   amount: number;
   status: string;
-  createdAt: string; // This will be an ISO date string from the server
+  createdAt: string; 
 }
 
 function getCookie(name: string): string | null {
@@ -105,17 +104,15 @@ except Exception as e:
     setNewlyGeneratedKey(null);
   };
 
-  // --- Effects ---
+
   useEffect(() => {
-    // Effect for fade-in animations
     setTimeout(() => setShowText(true), 500);
     setTimeout(() => setShowCode(true), 1000);
   }, []);
 
-  // 2. Add a new useEffect to fetch transactions when the user is available
   useEffect(() => {
     const fetchTransactions = async () => {
-      if (!user) return; // Don't fetch if the user isn't loaded yet
+      if (!user) return; 
 
       setTransactionsLoading(true);
       try {
@@ -133,14 +130,13 @@ except Exception as e:
         setTransactions(data);
       } catch (error) {
         console.error("Error fetching transactions:", error);
-        // Optionally set an error state here to show in the UI
       } finally {
         setTransactionsLoading(false);
       }
     };
 
     fetchTransactions();
-  }, [user]); // Re-run this effect if the user object changes
+  }, [user]);
 
   if (!user) {
     return null; 
@@ -239,7 +235,6 @@ except Exception as e:
             </button>
           )}
 
-          {/* Demo Button */}
           {user.apiKeyExists ?
           <a
             

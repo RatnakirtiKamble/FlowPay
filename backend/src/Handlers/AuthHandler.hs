@@ -2,8 +2,18 @@
 {-# LANGUAGE DataKinds #-}
 
 -- |
--- This module contains the handlers for public-facing authentication routes,
--- including user registration, login, and logout.
+-- Module      : Handlers.AuthHandler
+-- Description : Handlers for public authentication routes: registration, login, and logout.
+--
+-- This module provides handlers for merchants to:
+--  * Register a new account with hashed password storage
+--  * Login by validating credentials and issuing JWT and XSRF cookies
+--  * Logout by expiring authentication cookies
+--
+-- Passwords are hashed securely using bcrypt before storage.
+-- Login establishes an authenticated session via cookies.
+-- Logout clears these cookies to invalidate the session on the client side.
+--
 module Handlers.AuthHandler (registerHandler, loginHandler, logoutHandler) where
 
 import Control.Monad.IO.Class (liftIO)
@@ -16,7 +26,6 @@ import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Time (UTCTime(..), Day(..))
 import Database.PostgreSQL.Simple (query)
 import Servant
-
 import Servant.Auth.Server (AuthResult(..), acceptLogin)
 import Web.Cookie (SetCookie, defaultSetCookie, setCookieName, setCookieValue, setCookieExpires, setCookiePath)
 
@@ -29,10 +38,13 @@ import Models.Merchant
   , toPublicMerchant
   )
 
--- |
--- Handles new merchant registration. Hashes the provided password and inserts
--- a new merchant record into the database, returning the public details of the
--- newly created merchant.
+-- | Registers a new merchant user.
+--
+-- Takes a 'RegistrationRequest' with user details and plaintext password,
+-- hashes the password using bcrypt, stores the new merchant in the database,
+-- and returns the public merchant information (without sensitive data).
+--
+-- Throws HTTP 500 error if password hashing fails.
 registerHandler :: RegistrationRequest -> App PublicMerchant
 registerHandler req = do
   mHashedPasswordBytes <- liftIO $ hashPasswordUsingPolicy slowerBcryptHashingPolicy (encodeUtf8 $ reqPassword req)
@@ -46,10 +58,12 @@ registerHandler req = do
         (reqName req, reqEmail req, hashedPassword)
       return $ toPublicMerchant newMerchant
 
--- |
--- Handles merchant login. It validates the provided email and password against
--- the database. On success, it generates JWT and XSRF cookies and returns them
--- in the response headers to establish a session.
+-- | Authenticates a merchant by validating email and password.
+--
+-- On success, returns HTTP headers to set JWT and XSRF cookies to establish
+-- an authenticated session.
+--
+-- Returns HTTP 401 Unauthorized if credentials are invalid or login fails.
 loginHandler :: LoginRequest -> App (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
 loginHandler req = do
   conn <- asks dbConnection
@@ -70,21 +84,23 @@ loginHandler req = do
         else throwError err401 { errBody = "Invalid email or password." }
     _ -> throwError err401 { errBody = "Invalid email or password." }
 
--- |
--- Creates a 'SetCookie' header that instructs the browser to immediately
--- expire and delete a cookie by setting its expiration date to a time in the past.
+-- | Creates a 'SetCookie' header that expires and deletes a cookie immediately.
+--
+-- Used to instruct browsers to remove authentication cookies during logout.
 expireCookie :: ByteString -> SetCookie
 expireCookie name = defaultSetCookie
   { setCookieName = name
   , setCookieValue = ""
   , setCookiePath = Just "/"
-  , setCookieExpires = Just (UTCTime (ModifiedJulianDay 0) 0) -- A time in the distant past
+  , setCookieExpires = Just (UTCTime (ModifiedJulianDay 0) 0) -- A timestamp far in the past
   }
 
--- |
--- Handles merchant logout. This is a protected endpoint that, upon successful
--- authentication, returns 'Set-Cookie' headers that expire the JWT and XSRF
--- cookies, effectively logging the user out on the client-side.
+-- | Logs out an authenticated merchant by expiring the JWT and XSRF cookies.
+--
+-- Returns HTTP 204 No Content with 'Set-Cookie' headers that instruct
+-- the client to delete these cookies.
+--
+-- Returns HTTP 401 Unauthorized if authentication fails.
 logoutHandler :: AuthResult Merchant -> App (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
 logoutHandler (Authenticated _) = do
   let expiredJwtCookie = expireCookie "JWT-Cookie"

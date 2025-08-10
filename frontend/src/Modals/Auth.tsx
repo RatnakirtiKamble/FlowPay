@@ -41,8 +41,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (isSignup) {
-        // NOTE: The actual registration fetch would still happen here.
-        // After a successful registration, you then log the user in.
         const registerRes = await fetch("http://localhost:8080/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -57,17 +55,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             const errorData = await registerRes.json().catch(() => ({}));
             throw new Error(errorData.message || "Registration failed.");
         }
-        
-        // After successful registration, log the user in using the context function
+      
         await login(email, password);
 
       } else {
-        // For login, just call the function from the context
         await login(email, password);
       }
 
       setLoading(false);
-      onClose(); // Close the modal on success
+      onClose(); 
     } catch (err) {
       setError((err as Error).message);
       setLoading(false);

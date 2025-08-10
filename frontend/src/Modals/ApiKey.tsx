@@ -14,7 +14,6 @@ export const ApiKeyOverlay: React.FC<ApiKeyOverlayProps> = ({ apiKey, onClose })
     setTimeout(() => setCopyButtonText('Copy'), 2000); 
   };
 
-  // Close modal on 'Escape' key press
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
