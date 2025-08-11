@@ -18,3 +18,24 @@
 [2025-08-10 15:41:38] [LevelInfo] Received payment request with API key: AXxo9gO381AsTJzPQARUmffnkJvM87ebgeyFFgcVoc8
 [2025-08-10 15:41:38] [LevelInfo] API key validated for merchant ID: 1
 [2025-08-10 15:41:38] [LevelInfo] Payment successful. Txn ID: 3, New Balance: 664.44
+[2025-08-10 22:01:18] [LevelInfo] Received payment request with API key: NtAsctHRdR9oH9ZMmdYkdYK1-zgIyx83W8PPMg0edpA
+[2025-08-10 22:01:18] [LevelInfo] API key validated for merchant ID: 1
+[2025-08-10 22:01:18] [LevelInfo] Payment successful. Txn ID: 1, New Balance: 9.99
+[2025-08-10 22:01:28] [LevelInfo] Received payment request with API key: NtAsctHRdR9oH9ZMmdYkdYK1-zgIyx83W8PPMg0edpA
+[2025-08-10 22:01:28] [LevelInfo] API key validated for merchant ID: 1
+[2025-08-10 22:01:28] [LevelInfo] Payment successful. Txn ID: 2, New Balance: 25.98
+[2025-08-10 22:03:54] [LevelInfo] Received payment request with API key: gC2oeEAIF9QYvCkwwcucDs5MuMUEwxtUNFsHkZtCd28
+[2025-08-10 22:03:54] [LevelInfo] API key validated for merchant ID: 2
+[2025-08-10 22:03:54] [LevelInfo] Payment successful. Txn ID: 3, New Balance: 15.99
+[2025-08-10 22:04:03] [LevelInfo] Received payment request with API key: gC2oeEAIF9QYvCkwwcucDs5MuMUEwxtUNFsHkZtCd28
+[2025-08-10 22:04:03] [LevelInfo] API key validated for merchant ID: 2
+[2025-08-10 22:04:03] [LevelInfo] Payment successful. Txn ID: 4, New Balance: 79.99
+[2025-08-10 22:04:05] [LevelInfo] Received payment request with API key: gC2oeEAIF9QYvCkwwcucDs5MuMUEwxtUNFsHkZtCd28
+[2025-08-10 22:04:05] [LevelInfo] API key validated for merchant ID: 2
+[2025-08-10 22:04:05] [LevelInfo] Payment successful. Txn ID: 5, New Balance: 188.99
+[2025-08-10 22:07:58] [LevelInfo] Received payment request with API key: GO1xlHMALepcQVrKjNhOADGhqh12bPXT7rYQTNQQVDE
+[2025-08-10 22:07:58] [LevelInfo] API key validated for merchant ID: 1
+[2025-08-10 22:07:58] [LevelInfo] Payment successful. Txn ID: 1, New Balance: 22.3
+[2025-08-10 22:08:58] [LevelInfo] Received payment request with API key: 7PbOcTO6dnCT-_cUsWmqVpG9cLKYvqJPbFPploZXl_U
+[2025-08-10 22:08:58] [LevelInfo] API key validated for merchant ID: 1
+[2025-08-10 22:08:58] [LevelInfo] Payment successful. Txn ID: 2, New Balance: 78.29
