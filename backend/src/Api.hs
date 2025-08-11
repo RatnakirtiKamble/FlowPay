@@ -22,11 +22,12 @@ import GHC.Generics (Generic)
 import Servant
 import Servant.Auth.Server (AuthResult(..))
 import Web.Cookie (SetCookie)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
 import Database.PostgreSQL.Simple (query, Only(..))
+import Control.Monad.Logger (logInfoN)
 
 import App (App, AppEnv(..))
 import Auth (AuthMiddleware)
@@ -100,9 +101,10 @@ server = publicServer :<|> protectedServer
     -- | Returns fresh public merchant details for the authenticated merchant.
     dashboardServer :: AuthResult Merchant -> App PublicMerchant
     dashboardServer authResult = do
-      -- Print the AuthResult to backend console/logs for debugging
-      liftIO $ putStrLn ("AuthResult received in dashboardServer: " ++ show authResult)
-      
+
+
+      -- Log to your monad logger (which writes to app.log)
+      logInfoN $ "[DEBUG] dashboardServer reached with AuthResult: " <> pack (show authResult)
       case authResult of
         Authenticated merchant -> do
           let mId = merchantId merchant
