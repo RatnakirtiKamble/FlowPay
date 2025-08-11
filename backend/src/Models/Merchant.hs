@@ -4,7 +4,7 @@
 module Models.Merchant where
 
 import GHC.Generics (Generic)
-import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=), (.:), Value(Object))
+import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=), (.:), (.!=), (.:?), Value(Object))
 import Data.Text (Text)
 import Data.Maybe (isJust)
 import Database.PostgreSQL.Simple (ToRow) 
@@ -26,6 +26,7 @@ instance ToJSON Merchant where
     , "merchantName"    .= merchantName merchant
     , "merchantEmail"   .= merchantEmail merchant
     , "merchantBalance" .= merchantBalance merchant
+    , "merchantApiKey"  .= merchantApiKey merchant 
     ]
 
 instance FromJSON Merchant where
@@ -34,7 +35,7 @@ instance FromJSON Merchant where
     <*> v .: "merchantName"
     <*> v .: "merchantEmail"
     <*> pure ""    
-    <*> pure Nothing
+    <*> v .:? "merchantApiKey" .!= Nothing
     <*> v .: "merchantBalance"
   parseJSON _ = mempty
 
