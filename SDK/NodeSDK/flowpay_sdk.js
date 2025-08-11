@@ -16,7 +16,7 @@ class FlowPayClient {
      * };
      * main();
      */
-    constructor({ apiKey, baseUrl = "http://localhost:8080" }) {
+    constructor({ apiKey, baseUrl = "https://flowpay-production.up.railway.app"}) {
         /**
          * Initializes the FlowPay client.
          *

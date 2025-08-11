@@ -65,7 +65,7 @@ export default function DemoMerchantSite() {
         });
 
         if (res.ok) {
-            setPaymentStatus(`Payment for $${product.price.toFixed(2)} successful!`);
+            setPaymentStatus(`Payment for $${product.price.toFixed(2)} successful! Check your dashboard!`);
         } else {
             setPaymentStatus("Payment failed. Please try again.");
         }

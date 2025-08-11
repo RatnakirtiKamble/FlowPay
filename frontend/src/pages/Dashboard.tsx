@@ -15,7 +15,7 @@ export default function Dashboard() {
   // ++ Get the new updateUser function from our context
   const { user, updateUser } = useAuth();
 
-  const POLLING_INTERVAL = 5000;
+  const [polling_interval, setPollingInterval] = useState(5000);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -26,8 +26,31 @@ export default function Dashboard() {
   const [showCode, setShowCode] = useState(false);
 
   // --- SDK Code Snippets ---
-  const pythonCode = `# Python sample SDK code...`;
-  const nodeCode = `// Node.js sample SDK code...`;
+  const pythonCode = `# Python sample SDK code...
+  # Python sample SDK code
+from flowpay_sdk import FlowPayClient
+
+client = FlowPayClient(api_key="YOUR API KEY HERE")
+try:
+    response = client.make_payment(amount=100.50)
+    print("Payment successful:", response)
+except Exception as e:
+    print(f"Payment failed: {e}")`;
+  const nodeCode = `// Node.js sample SDK code
+  const { FlowPayClient } = require('./flowpay_sdk');
+  
+  const main = async () => {
+      try {
+          const client = new FlowPayClient({ apiKey: "sk_your_api_key_here" });
+          const response = await client.makePayment(100.50);
+          console.log("Payment successful:", response);
+      } 
+      catch (error) {
+          console.error(\`Payment failed: \${error.message}\`);
+      }
+  };
+  
+  main();`;
 
   // --- API Handlers ---
   const handleRevoke = async () => {
@@ -92,7 +115,7 @@ export default function Dashboard() {
     };
 
     fetchTransactions();
-    const intervalId = setInterval(fetchTransactions, POLLING_INTERVAL);
+    const intervalId = setInterval(fetchTransactions, polling_interval);
     return () => clearInterval(intervalId);
   }, [user]);
 
@@ -202,6 +225,7 @@ export default function Dashboard() {
           <a
             href="/demo"
             target="_blank"
+            onClick={() => {setPollingInterval(1000)}}
             rel="noopener noreferrer"
             className="ml-auto bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-3 rounded-lg transition"
           >

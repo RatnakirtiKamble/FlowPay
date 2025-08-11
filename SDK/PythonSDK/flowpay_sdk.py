@@ -14,7 +14,7 @@ class FlowPayClient:
             print(f"Payment failed: {e}")
     """
 
-    def __init__(self, api_key: str, base_url: str = "http://localhost:8080"):
+    def __init__(self, api_key: str, base_url: str = "https://flowpay-production.up.railway.app"):
         """
         Initializes the FlowPay client.
 
