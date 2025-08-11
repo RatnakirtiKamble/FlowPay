@@ -12,10 +12,10 @@ interface Transaction {
 }
 
 export default function Dashboard() {
-  // ++ Get the new updateUser function from our context
-  const { user, updateUser } = useAuth();
+  // ++ Get both user and the new refreshUser function
+  const { user, updateUser, refreshUser } = useAuth();
 
-  const [polling_interval, setPollingInterval] = useState(5000);
+  const [pollingInterval, setPollingInterval] = useState(5000); // Renamed for clarity
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,46 +27,44 @@ export default function Dashboard() {
 
   // --- SDK Code Snippets ---
   const pythonCode = `# Python sample SDK code...
-  # Python sample SDK code
-from flowpay_sdk import FlowPayClient
 
-client = FlowPayClient(api_key="YOUR API KEY HERE")
-try:
+  # Python sample SDK code
+  
+  from flowpay_sdk import FlowPayClient
+  client = FlowPayClient(api_key="YOUR API KEY HERE")
+  
+  try:
     response = client.make_payment(amount=100.50)
     print("Payment successful:", response)
-except Exception as e:
+  except Exception as e:
     print(f"Payment failed: {e}")`;
+
   const nodeCode = `// Node.js sample SDK code
-  const { FlowPayClient } = require('./flowpay_sdk');
   
+  const { FlowPayClient } = require('./flowpay_sdk');
   const main = async () => {
-      try {
-          const client = new FlowPayClient({ apiKey: "sk_your_api_key_here" });
-          const response = await client.makePayment(100.50);
-          console.log("Payment successful:", response);
-      } 
-      catch (error) {
-          console.error(\`Payment failed: \${error.message}\`);
-      }
+    try {
+      const client = new FlowPayClient({ apiKey: "sk_your_api_key_here" });
+      const response = await client.makePayment(100.50);
+      console.log("Payment successful:", response);
+    }
+    catch (error) {
+      console.error(\`Payment failed: \${error.message}\`);
+    }
   };
   
-  main();`;
+  main();`; 
 
   // --- API Handlers ---
   const handleRevoke = async () => {
-    if (!window.confirm("Are you sure you want to revoke your API key? This action cannot be undone.")) {
-      return;
-    }
+    if (!window.confirm("Are you sure you want to revoke your API key? This action cannot be undone.")) return;
     setIsRevoking(true);
     try {
       await apiClient.post("/merchant/apikey/revoke");
-      // ++ Instead of reloading, update the user state directly
-      if (user) {
-        updateUser({ publicMerchantApiKeyExists: false });
-      }
+      if (user) updateUser({ publicMerchantApiKeyExists: false });
     } catch (error) {
       console.error("API Key revocation error:", error);
-      alert("Could not revoke API key. Please try again.");
+      alert("Could not revoke API key.");
     } finally {
       setIsRevoking(false);
     }
@@ -79,17 +77,14 @@ except Exception as e:
       setNewlyGeneratedKey(response.data.apiKey);
     } catch (error) {
       console.error("API Key generation error:", error);
-      alert("Could not generate API key. Please try again.");
+      alert("Could not generate API key.");
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleOverlayClose = () => {
-    // ++ Instead of reloading, update state and close the overlay
-    if (user) {
-      updateUser({ publicMerchantApiKeyExists: true });
-    }
+    if (user) updateUser({ publicMerchantApiKeyExists: true });
     setNewlyGeneratedKey(null);
   };
 
@@ -99,27 +94,40 @@ except Exception as e:
     setTimeout(() => setShowCode(true), 1000);
   }, []);
 
-  // --- Transaction Fetching useEffect ---
+  // --- Data Fetching useEffect ---
   useEffect(() => {
-    const fetchTransactions = async () => {
+    // This function now refreshes ALL dashboard data
+    const refreshDashboardData = async () => {
       if (!user) return;
-      if (transactions.length === 0) setTransactionsLoading(true);
       try {
-        const response = await apiClient.get<Transaction[]>("/merchant/payments");
-        setTransactions(response.data);
+        // Fetch transactions and user profile data in parallel for speed
+        await Promise.all([
+          apiClient.get<Transaction[]>("/merchant/payments").then(res => setTransactions(res.data)),
+          refreshUser() // This will update the balance
+        ]);
       } catch (error) {
-        console.error("Error fetching transactions:", error);
-      } finally {
-        setTransactionsLoading(false);
+        console.error("Error refreshing dashboard data:", error);
       }
     };
 
-    fetchTransactions();
-    const intervalId = setInterval(fetchTransactions, polling_interval);
-    return () => clearInterval(intervalId);
-  }, [user]);
+    const initialFetch = async () => {
+      setTransactionsLoading(true);
+      await refreshDashboardData();
+      setTransactionsLoading(false);
+    };
 
-  // This "guard clause" prevents rendering until the user is loaded
+    initialFetch();
+    const intervalId = setInterval(refreshDashboardData, pollingInterval);
+    const handleFocus = () => refreshDashboardData();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [pollingInterval]); // ++ Added dependencies to fix bugs
+
+  // Guard clause
   if (!user) {
     return (
       <div className="flex justify-center items-center min-h-screen text-white text-2xl">

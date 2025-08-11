@@ -24,7 +24,8 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateUser: (updatedFields: Partial<PublicMerchant>) => void; // ++ NEW
+  updateUser: (updatedFields: Partial<PublicMerchant>) => void;
+  refreshUser: () => Promise<void>; // ++ We will implement this
   authModalMode: 'login' | 'signup' | null;
   openLoginModal: () => void;
   openSignupModal: () => void;
@@ -84,24 +85,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const closeAuthModal = () => setAuthModalMode(null);
 
   // --- LOGIN/LOGOUT & USER UPDATE LOGIC ---
+  const updateUser = (updatedFields: Partial<PublicMerchant>) => {
+    setUser(prevUser => {
+      if (!prevUser) return null;
+      const newUser = { ...prevUser, ...updatedFields };
+      localStorage.setItem("user", JSON.stringify(newUser));
+      return newUser;
+    });
+  };
+
   const login = async (email: string, password: string) => {
-    try {
-      const response = await apiClient.post<LoginResponse>('/login', {
-        loginEmail: email,
-        loginPassword: password,
-      });
-      const { lrAccessToken, lrXsrfToken, lrMerchant } = response.data;
-      localStorage.setItem("accessToken", lrAccessToken);
-      localStorage.setItem("xsrfToken", lrXsrfToken);
-      localStorage.setItem("user", JSON.stringify(lrMerchant));
-      setAccessToken(lrAccessToken);
-      setUser(lrMerchant);
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        throw new Error(error.response.data.errBody || "Login failed");
-      }
-      throw new Error("An unexpected error occurred.");
-    }
+    const response = await apiClient.post<LoginResponse>('/login', {
+      loginEmail: email,
+      loginPassword: password,
+    });
+    const { lrAccessToken, lrXsrfToken, lrMerchant } = response.data;
+    localStorage.setItem("accessToken", lrAccessToken);
+    localStorage.setItem("xsrfToken", lrXsrfToken);
+    localStorage.setItem("user", JSON.stringify(lrMerchant));
+    setAccessToken(lrAccessToken);
+    setUser(lrMerchant);
   };
   
   const logout = () => {
@@ -113,19 +116,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate("/");
   };
 
-  // ++ NEW: Function to update the user state from other components
-  const updateUser = (updatedFields: Partial<PublicMerchant>) => {
-    setUser(prevUser => {
-      if (!prevUser) return null;
-      const newUser = { ...prevUser, ...updatedFields };
-      // Update localStorage as well so the change persists
-      localStorage.setItem("user", JSON.stringify(newUser));
-      return newUser;
-    });
+  // ++ NEW: A function to fetch the latest user data from the /dashboard endpoint
+  const refreshUser = async () => {
+    try {
+      const response = await apiClient.get<PublicMerchant>('/dashboard');
+      updateUser(response.data); // Update the user state with the fresh data
+    } catch (error) {
+      console.error("Failed to refresh user data:", error);
+      // If the token is expired or invalid, log the user out
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        logout();
+      }
+    }
   };
 
   const contextValue = useMemo(() => ({
-    user, accessToken, loading, login, logout, updateUser, // ++ NEW
+    user, accessToken, loading, login, logout, updateUser, refreshUser, // ++ Expose refreshUser
     authModalMode, openLoginModal, openSignupModal, closeAuthModal
   }), [user, accessToken, loading, authModalMode]);
 
