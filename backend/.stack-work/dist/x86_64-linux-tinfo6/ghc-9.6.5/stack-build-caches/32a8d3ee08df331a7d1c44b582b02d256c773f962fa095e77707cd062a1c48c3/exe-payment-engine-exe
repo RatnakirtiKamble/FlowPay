@@ -5,7 +5,7 @@
 ? /home/ratnakirti/Work/FlowPay/backend/.stack-work/dist/x86_64-linux-tinfo6/ghc-9.6.5/build/payment-engine-exe/autogen/cabal_macros.h
 : hash: 3cbcb111abcf531c4ad9ac1f78a7c374e168a00dfa5a3e4ce882e750766d5339
 /home/ratnakirti/Work/FlowPay/backend/app/Main.hs:
-  hash: 50412741fa49e86293836f4d415bcec6ea8f8206c0795b49488483e469977932
+  hash: 10b9e89004f141729f51915a5adec71272defee15b853a4b9dde9efac41af158
 /home/ratnakirti/Work/FlowPay/backend/package.yaml:
   hash: 02cdf4b2ade6bb6a91ec217d8126dd2f9c96694e62cf8a874f37e8c8ef3bcc86
 /home/ratnakirti/Work/FlowPay/backend/payment-engine.cabal:
@@ -23,7 +23,7 @@
 /home/ratnakirti/Work/FlowPay/backend/src/Handlers/AccountHandler.hs:
   hash: 84b4943219917224c21781800f64ad3b8568ac137017230a7a04cdd21672ed92
 /home/ratnakirti/Work/FlowPay/backend/src/Handlers/AuthHandler.hs:
-  hash: 209e3bedc8b96fbd86df33e86d51b9242a841baf501d93c1d6bb8483143d5c83
+  hash: 9aca6970bae5ecc0d2cc2d4b55484b47d06032c67fb128dfdbf08e1e582f5ce5
 /home/ratnakirti/Work/FlowPay/backend/src/Handlers/MerchantHandler.hs:
   hash: 277fba04b219efcd125bb0eddbb21999aa04cb4399de9df52ffd26237a1be867
 /home/ratnakirti/Work/FlowPay/backend/src/Handlers/PaymentHandler.hs:

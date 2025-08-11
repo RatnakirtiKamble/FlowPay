@@ -27,7 +27,7 @@ import Data.Time (UTCTime(..), Day(..))
 import Database.PostgreSQL.Simple (query)
 import Servant
 import Servant.Auth.Server (AuthResult(..), acceptLogin)
-import Web.Cookie (SetCookie, defaultSetCookie, setCookieName, setCookieValue, setCookieExpires, setCookiePath, setCookieHttpOnly)
+import Web.Cookie (sameSiteNone, SetCookie, defaultSetCookie, setCookieName, setCookieSameSite, setCookieValue, setCookieExpires, setCookiePath, setCookieHttpOnly)
 
 import App (App, AppEnv(..))
 import Models.Merchant
@@ -94,6 +94,7 @@ expireCookie name = defaultSetCookie
   , setCookiePath = Just "/"
   , setCookieExpires = Just (UTCTime (ModifiedJulianDay 0) 0)
   , setCookieHttpOnly = False
+  , setCookieSameSite = Just sameSiteNone
   }
 
 -- | Logs out an authenticated merchant by expiring the JWT and XSRF cookies.
