@@ -20,6 +20,7 @@ module Api (api, server) where
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
 import Servant
+import Servant (NoContent(..))
 import Servant.Auth.Server (AuthResult(..))
 import Web.Cookie (SetCookie)
 import Data.Text (Text, pack)
@@ -55,7 +56,7 @@ type PaymentAPI =
 type PublicAPI =
        "register" :> ReqBody '[JSON] RegistrationRequest :> Post '[JSON] PublicMerchant
   :<|> "login" :> ReqBody '[JSON] LoginRequest :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
-  :<|> PaymentAPI
+  :<|> PaymentAPI :<|> "dashboard" :> Get '[JSON] NoContent 
 
 -- | Protected API routes requiring authentication via 'AuthMiddleware'.
 type ProtectedMerchantAPI =
@@ -64,7 +65,7 @@ type ProtectedMerchantAPI =
   :<|> AuthMiddleware :> "merchant" :> "apikey" :> "revoke" :> Post '[JSON] NoContent
   :<|> AuthMiddleware :> "logout" :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
   :<|> AuthMiddleware :> "merchant" :> "payments" :> Get '[JSON] [Payment] 
-  :<|> AuthMiddleware :> "dashboard" :> Get '[JSON] PublicMerchant
+  
 
 type ProtectedAPI = ProtectedMerchantAPI
 
@@ -82,7 +83,7 @@ server :: ServerT API App
 server = publicServer :<|> protectedServer
   where
     -- Public endpoints
-    publicServer = registerHandler :<|> loginHandler :<|> paymentServer
+    publicServer = registerHandler :<|> loginHandler :<|> paymentServer :<|> dashboardServer
 
     -- Protected endpoints
     protectedServer =
@@ -91,7 +92,7 @@ server = publicServer :<|> protectedServer
         :<|> revokeApiKeyHandler
         :<|> logoutHandler
         :<|> listPaymentsHandler
-        :<|> dashboardServer
+        
 
     merchantBalanceServer = balanceHandler
     merchantApiKeyServer = merchantServer
@@ -99,19 +100,23 @@ server = publicServer :<|> protectedServer
     listPaymentsHandler = Handlers.MerchantHandler.listPaymentsHandler
 
     -- | Returns fresh public merchant details for the authenticated merchant.
-    dashboardServer :: AuthResult Merchant -> App PublicMerchant
-    dashboardServer authResult = do
+    dashboardServer :: App NoContent
+    dashboardServer = do
+      -- You can put any logic here, or just accept directly
+      return NoContent  -- Responds with HTTP 204 No Content
+    -- dashboardServer :: AuthResult Merchant -> App PublicMerchant
+    -- dashboardServer authResult = do
 
 
-      -- Log to your monad logger (which writes to app.log)
-      logInfoN $ "[DEBUG] dashboardServer reached with AuthResult: " <> pack (show authResult)
-      case authResult of
-        Authenticated merchant -> do
-          let mId = merchantId merchant
-          conn <- asks dbConnection
-          let sqlQuery = "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE merchant_id = ?"
-          merchants <- liftIO $ query conn sqlQuery (Only mId)
-          case merchants of
-            []    -> throwError err404 { errBody = "Authenticated merchant not found in database." }
-            (m:_) -> return $ toPublicMerchant m
-        _ -> throwError err401
+    --   -- Log to your monad logger (which writes to app.log)
+    --   logInfoN $ "[DEBUG] dashboardServer reached with AuthResult: " <> pack (show authResult)
+    --   case authResult of
+    --     Authenticated merchant -> do
+    --       let mId = merchantId merchant
+    --       conn <- asks dbConnection
+    --       let sqlQuery = "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE merchant_id = ?"
+    --       merchants <- liftIO $ query conn sqlQuery (Only mId)
+    --       case merchants of
+    --         []    -> throwError err404 { errBody = "Authenticated merchant not found in database." }
+    --         (m:_) -> return $ toPublicMerchant m
+    --     _ -> throwError err401
