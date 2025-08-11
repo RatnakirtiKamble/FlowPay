@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const loginRes = await fetch("http://localhost:8080/login", {
+      const loginRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
         const csrfToken = getCookie("XSRF-TOKEN");
-        await fetch("http://localhost:8080/logout", {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/logout`, {
             method: "POST",
             credentials: "include",
             headers: {
