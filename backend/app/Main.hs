@@ -74,15 +74,13 @@ logToFile path _ _ level msg = do
 -- | CORS middleware allowing requests from the frontend dev server at localhost:5173,
 -- enabling credentials and common HTTP methods and headers needed for authentication.
 corsWithCredentials :: Middleware
-corsWithCredentials =
-  cors $
-    const $
-      Just $
-        simpleCorsResourcePolicy
-          { corsOrigins = Just (["https://flowpayratna.netlify.app", "http://localhost:5173"], True),
-            corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token"]
-          }
+corsWithCredentials = cors (const $ Just policy)
+  where
+    policy = simpleCorsResourcePolicy
+      { corsOrigins = Just (["https://flowpayratna.netlify.app", "http://localhost:5173"], True)
+      , corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      , corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token", "X-Xsrf-Token", "X-XSRF-TOKEN"]
+      }
 
 -- | Main application entry point.
 --

@@ -9,7 +9,4 @@ export default defineConfig({
             react(),
             tailwindcss()
           ],
-  server: {
-    https: true
-  },
 })
