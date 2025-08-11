@@ -77,7 +77,7 @@ corsWithCredentials :: Middleware
 corsWithCredentials = cors (const $ Just policy)
   where
     policy = simpleCorsResourcePolicy
-      { corsOrigins = Just (["https://flowpayratna.netlify.app", "http://localhost:5173"], True)
+      { corsOrigins = Just (["https://flowpayratna.netlify.app", "http://localhost:5173", "https://react-frontend-production-0656.up.railway.app"], True)
       , corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
       , corsRequestHeaders = ["Content-Type", "Authorization", "X-API-Key", "X-XSRF-Token", "X-Xsrf-Token", "X-XSRF-TOKEN"]
       }
