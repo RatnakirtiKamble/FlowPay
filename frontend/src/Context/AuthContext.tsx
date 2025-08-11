@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const csrfToken = getCookie("XSRF-TOKEN");
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/dashboard`, {
         credentials: "include",
-        headers: { "X-XSRF-TOKEN": csrfToken || "" , "X-Xsrf-Token:": csrfToken || "" },
+        headers: { "X-XSRF-TOKEN": csrfToken || ""},
       });
       
       if (response.ok) {
