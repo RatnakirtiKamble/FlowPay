@@ -99,14 +99,17 @@ server = publicServer :<|> protectedServer
 
     -- | Returns fresh public merchant details for the authenticated merchant.
     dashboardServer :: AuthResult Merchant -> App PublicMerchant
-    dashboardServer (Authenticated merchant) = do
-      let mId = merchantId merchant
-      conn <- asks dbConnection
-      let sqlQuery = "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE merchant_id = ?"
-
-      merchants <- liftIO $ query conn sqlQuery (Only mId)
-      case merchants of
-        []    -> throwError err404 { errBody = "Authenticated merchant not found in database." }
-        (m:_) -> return $ toPublicMerchant m 
-
-    dashboardServer _ = throwError err401
+    dashboardServer authResult = do
+      -- Print the AuthResult to backend console/logs for debugging
+      liftIO $ putStrLn ("AuthResult received in dashboardServer: " ++ show authResult)
+      
+      case authResult of
+        Authenticated merchant -> do
+          let mId = merchantId merchant
+          conn <- asks dbConnection
+          let sqlQuery = "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE merchant_id = ?"
+          merchants <- liftIO $ query conn sqlQuery (Only mId)
+          case merchants of
+            []    -> throwError err404 { errBody = "Authenticated merchant not found in database." }
+            (m:_) -> return $ toPublicMerchant m
+        _ -> throwError err401
