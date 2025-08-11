@@ -81,6 +81,14 @@ data LoginRequest = LoginRequest
 
 instance FromJSON LoginRequest
 
+data LoginResponse = LoginResponse
+  { lrAccessToken :: Text
+  , lrXsrfToken   :: Text
+  , lrMerchant    :: PublicMerchant
+  } deriving (Generic, Show)
+
+instance ToJSON LoginResponse
+
 data BalanceResponse = BalanceResponse
   { currentBalance :: Double
   } deriving (Eq, Show, Generic)

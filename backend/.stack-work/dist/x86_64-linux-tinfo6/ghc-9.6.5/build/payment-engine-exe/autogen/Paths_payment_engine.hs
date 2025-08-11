@@ -46,12 +46,12 @@ getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: 
 
 
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
-bindir     = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/32a8d3ee08df331a7d1c44b582b02d256c773f962fa095e77707cd062a1c48c3/9.6.5/bin"
-libdir     = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/32a8d3ee08df331a7d1c44b582b02d256c773f962fa095e77707cd062a1c48c3/9.6.5/lib/x86_64-linux-ghc-9.6.5/payment-engine-0.1.0.0-B5qx37OXaZEGst3Vd9DGC2-payment-engine-exe"
-dynlibdir  = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/32a8d3ee08df331a7d1c44b582b02d256c773f962fa095e77707cd062a1c48c3/9.6.5/lib/x86_64-linux-ghc-9.6.5"
-datadir    = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/32a8d3ee08df331a7d1c44b582b02d256c773f962fa095e77707cd062a1c48c3/9.6.5/share/x86_64-linux-ghc-9.6.5/payment-engine-0.1.0.0"
-libexecdir = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/32a8d3ee08df331a7d1c44b582b02d256c773f962fa095e77707cd062a1c48c3/9.6.5/libexec/x86_64-linux-ghc-9.6.5/payment-engine-0.1.0.0"
-sysconfdir = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/32a8d3ee08df331a7d1c44b582b02d256c773f962fa095e77707cd062a1c48c3/9.6.5/etc"
+bindir     = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/c0cdda2ffa1b02237fa8585b2790b2b8a810673a195cf2060670cccd8a0dfccd/9.6.5/bin"
+libdir     = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/c0cdda2ffa1b02237fa8585b2790b2b8a810673a195cf2060670cccd8a0dfccd/9.6.5/lib/x86_64-linux-ghc-9.6.5/payment-engine-0.1.0.0-FGnaUfxpWWH7FlAc2JFU0n-payment-engine-exe"
+dynlibdir  = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/c0cdda2ffa1b02237fa8585b2790b2b8a810673a195cf2060670cccd8a0dfccd/9.6.5/lib/x86_64-linux-ghc-9.6.5"
+datadir    = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/c0cdda2ffa1b02237fa8585b2790b2b8a810673a195cf2060670cccd8a0dfccd/9.6.5/share/x86_64-linux-ghc-9.6.5/payment-engine-0.1.0.0"
+libexecdir = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/c0cdda2ffa1b02237fa8585b2790b2b8a810673a195cf2060670cccd8a0dfccd/9.6.5/libexec/x86_64-linux-ghc-9.6.5/payment-engine-0.1.0.0"
+sysconfdir = "/home/ratnakirti/Work/FlowPay/backend/.stack-work/install/x86_64-linux-tinfo6/c0cdda2ffa1b02237fa8585b2790b2b8a810673a195cf2060670cccd8a0dfccd/9.6.5/etc"
 
 getBinDir     = catchIO (getEnv "payment_engine_bindir")     (\_ -> return bindir)
 getLibDir     = catchIO (getEnv "payment_engine_libdir")     (\_ -> return libdir)

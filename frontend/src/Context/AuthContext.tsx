@@ -1,148 +1,143 @@
-import { createContext, useState, useEffect, useContext, type ReactNode } from "react";
+import { createContext, useState, useEffect, useContext, useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-// Helper function to read a specific cookie
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(";").shift() || null;
-  }
-  return null;
+// ====================================================================================
+// 1. TYPE DEFINITIONS
+// ====================================================================================
+interface PublicMerchant {
+  publicMerchantName: string;
+  publicMerchantEmail: string;
+  publicMerchantBalance: number;
+  publicMerchantApiKeyExists: boolean;
 }
 
-// Interfaces for User and Context Type
-interface User {
-  name: string;
-  email: string;
-  balance: number;
-  apiKeyExists: boolean;
+interface LoginResponse {
+  lrAccessToken: string;
+  lrXsrfToken: string;
+  lrMerchant: PublicMerchant;
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: PublicMerchant | null;
+  accessToken: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
-  // --- Properties for modal control ---
+  logout: () => void;
+  updateUser: (updatedFields: Partial<PublicMerchant>) => void; // ++ NEW
   authModalMode: 'login' | 'signup' | null;
   openLoginModal: () => void;
   openSignupModal: () => void;
   closeAuthModal: () => void;
 }
 
+// ====================================================================================
+// 2. CONFIGURED API CLIENT
+// ====================================================================================
+export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_BACKEND_URL,
+});
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<PublicMerchant | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // --- State for managing the modal ---
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | null>(null);
   const navigate = useNavigate();
 
-  // --- Functions to control the modal state ---
+  // --- Session Persistence from localStorage ---
+  useEffect(() => {
+    try {
+      const storedToken = localStorage.getItem("accessToken");
+      const storedUser = localStorage.getItem("user");
+      if (storedToken && storedUser) {
+        setAccessToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Failed to parse stored auth data", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // --- Axios Interceptor for Auth Headers ---
+  useEffect(() => {
+    const requestInterceptor = apiClient.interceptors.request.use(
+      (config) => {
+        const xsrfToken = localStorage.getItem("xsrfToken");
+        if (accessToken) {
+          config.headers['Authorization'] = `Bearer ${accessToken}`;
+          if (xsrfToken) config.headers['X-XSRF-TOKEN'] = xsrfToken;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+    return () => apiClient.interceptors.request.eject(requestInterceptor);
+  }, [accessToken]);
+
   const openLoginModal = () => setAuthModalMode('login');
   const openSignupModal = () => setAuthModalMode('signup');
   const closeAuthModal = () => setAuthModalMode(null);
 
-  const refreshUser = async () => {
-    try {
-      const csrfToken = getCookie("XSRF-TOKEN");
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/dashboard`, {
-        credentials: "include",
-        headers: { "X-XSRF-TOKEN": csrfToken || ""},
-      });
-      
-      if (response.ok) {
-        const dashboardData = await response.json();
-        const loggedInUser: User = {
-          name: dashboardData.publicMerchantName,
-          email: dashboardData.publicMerchantEmail,
-          balance: dashboardData.publicMerchantBalance,
-          apiKeyExists: dashboardData.publicMerchantApiKeyExists,
-        };
-        setUser(loggedInUser);
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      setUser(null);
-    }
-  };
-
-  useEffect(() => {
-    const checkUserSession = async () => {
-      await refreshUser();
-      setLoading(false);
-    };
-    checkUserSession();
-  }, []);
-
+  // --- LOGIN/LOGOUT & USER UPDATE LOGIC ---
   const login = async (email: string, password: string) => {
-    setLoading(true);
     try {
-      const loginRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ loginEmail: email, loginPassword: password }),
+      const response = await apiClient.post<LoginResponse>('/login', {
+        loginEmail: email,
+        loginPassword: password,
       });
-
-      if (!loginRes.ok) {
-        const errorData = await loginRes.json().catch(() => ({}));
-        throw new Error(errorData.message || "Invalid credentials");
+      const { lrAccessToken, lrXsrfToken, lrMerchant } = response.data;
+      localStorage.setItem("accessToken", lrAccessToken);
+      localStorage.setItem("xsrfToken", lrXsrfToken);
+      localStorage.setItem("user", JSON.stringify(lrMerchant));
+      setAccessToken(lrAccessToken);
+      setUser(lrMerchant);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.errBody || "Login failed");
       }
-      
-      await refreshUser(); 
-      navigate("/dashboard");
-
-    } finally {
-      setLoading(false);
+      throw new Error("An unexpected error occurred.");
     }
   };
   
-  const logout = async () => {
-    try {
-        const csrfToken = getCookie("XSRF-TOKEN");
-        await fetch(`${import.meta.env.VITE_BACKEND_URL}/logout`, {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "X-XSRF-TOKEN": csrfToken || "",
-            },
-        });
-    } catch (error) {
-        console.error("Logout API call failed:", error);
-    } finally {
-        setUser(null);
-        navigate("/");
-    }
+  const logout = () => {
+    setAccessToken(null);
+    setUser(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("xsrfToken");
+    localStorage.removeItem("user");
+    navigate("/");
   };
 
-  const contextValue = {
-    user,
-    loading,
-    login,
-    logout,
-    refreshUser,
-    authModalMode,
-    openLoginModal,
-    openSignupModal,
-    closeAuthModal
+  // ++ NEW: Function to update the user state from other components
+  const updateUser = (updatedFields: Partial<PublicMerchant>) => {
+    setUser(prevUser => {
+      if (!prevUser) return null;
+      const newUser = { ...prevUser, ...updatedFields };
+      // Update localStorage as well so the change persists
+      localStorage.setItem("user", JSON.stringify(newUser));
+      return newUser;
+    });
   };
+
+  const contextValue = useMemo(() => ({
+    user, accessToken, loading, login, logout, updateUser, // ++ NEW
+    authModalMode, openLoginModal, openSignupModal, closeAuthModal
+  }), [user, accessToken, loading, authModalMode]);
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };

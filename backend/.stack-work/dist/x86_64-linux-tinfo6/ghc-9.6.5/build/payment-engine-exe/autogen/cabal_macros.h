@@ -140,6 +140,16 @@
   (major1) == 0 && (major2) <  7 || \
   (major1) == 0 && (major2) == 7 && (minor) <= 0)
 #endif /* MIN_VERSION_postgresql_simple */
+/* package random-1.2.1.2 */
+#ifndef VERSION_random
+#define VERSION_random "1.2.1.2"
+#endif /* VERSION_random */
+#ifndef MIN_VERSION_random
+#define MIN_VERSION_random(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  2 || \
+  (major1) == 1 && (major2) == 2 && (minor) <= 1)
+#endif /* MIN_VERSION_random */
 /* package servant-0.20.1 */
 #ifndef VERSION_servant
 #define VERSION_servant "0.20.1"
@@ -313,7 +323,7 @@
 #endif /* MIN_TOOL_VERSION_strip */
 
 #ifndef CURRENT_COMPONENT_ID
-#define CURRENT_COMPONENT_ID "payment-engine-0.1.0.0-B5qx37OXaZEGst3Vd9DGC2-payment-engine-exe"
+#define CURRENT_COMPONENT_ID "payment-engine-0.1.0.0-FGnaUfxpWWH7FlAc2JFU0n-payment-engine-exe"
 #endif /* CURRENT_COMPONENT_ID */
 #ifndef CURRENT_PACKAGE_VERSION
 #define CURRENT_PACKAGE_VERSION "0.1.0.0"

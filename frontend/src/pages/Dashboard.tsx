@@ -1,62 +1,34 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth, apiClient } from "../Context/AuthContext";
 import { ApiKeyOverlay } from "../Modals/ApiKey";
 
+// The interface for transaction data
 interface Transaction {
   paymentId: number;
   merchantId: number;
   amount: number;
   status: string;
-  createdAt: string; 
-}
-
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(";").shift() || null;
-  }
-  return null;
+  createdAt: string;
 }
 
 export default function Dashboard() {
-  const { user, refreshUser } = useAuth();
-  
-  const POLLING_INTERVAL = 5000; 
-  // --- Component State ---
+  // ++ Get the new updateUser function from our context
+  const { user, updateUser } = useAuth();
+
+  const POLLING_INTERVAL = 5000;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
   const [activeTab, setActiveTab] = useState<"python" | "node">("python");
   const [showText, setShowText] = useState(false);
   const [showCode, setShowCode] = useState(false);
-  const [isRevoking, setIsRevoking] = useState(false); 
 
   // --- SDK Code Snippets ---
-  const pythonCode = `# Python sample SDK code
-from flowpay_sdk import FlowPayClient
+  const pythonCode = `# Python sample SDK code...`;
+  const nodeCode = `// Node.js sample SDK code...`;
 
-client = FlowPayClient(api_key="YOUR API KEY HERE")
-try:
-    response = client.make_payment(amount=100.50)
-    print("Payment successful:", response)
-except Exception as e:
-    print(f"Payment failed: {e}")`;
-    const nodeCode = `// Node.js sample SDK code
-    const { FlowPayClient } = require('./flowpay_sdk');
-    const main = async () => {
-        try {
-            const client = new FlowPayClient({ apiKey: "sk_your_api_key_here" });
-            const response = await client.makePayment(100.50);
-            console.log("Payment successful:", response);
-        } 
-        catch (error) {
-            console.error(\`Payment failed: \${error.message}\`);
-        }
-    };
-    main();`;
-      
   // --- API Handlers ---
   const handleRevoke = async () => {
     if (!window.confirm("Are you sure you want to revoke your API key? This action cannot be undone.")) {
@@ -64,14 +36,11 @@ except Exception as e:
     }
     setIsRevoking(true);
     try {
-      const csrfToken = getCookie("XSRF-TOKEN");
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/merchant/apikey/revoke`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "X-XSRF-TOKEN": csrfToken || "" },
-      });
-      if (!response.ok) throw new Error("Failed to revoke API key.");
-      await refreshUser();
+      await apiClient.post("/merchant/apikey/revoke");
+      // ++ Instead of reloading, update the user state directly
+      if (user) {
+        updateUser({ publicMerchantApiKeyExists: false });
+      }
     } catch (error) {
       console.error("API Key revocation error:", error);
       alert("Could not revoke API key. Please try again.");
@@ -83,15 +52,8 @@ except Exception as e:
   const generateApiKey = async () => {
     setIsGenerating(true);
     try {
-      const csrfToken = getCookie("XSRF-TOKEN");
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/merchant/apikey/generate`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "X-XSRF-TOKEN": csrfToken || "" },
-      });
-      if (!response.ok) throw new Error("Failed to generate API key");
-      const data = await response.json();
-      setNewlyGeneratedKey(data.apiKey);
+      const response = await apiClient.post("/merchant/apikey/generate");
+      setNewlyGeneratedKey(response.data.apiKey);
     } catch (error) {
       console.error("API Key generation error:", error);
       alert("Could not generate API key. Please try again.");
@@ -101,62 +63,46 @@ except Exception as e:
   };
 
   const handleOverlayClose = () => {
-    refreshUser();
+    // ++ Instead of reloading, update state and close the overlay
+    if (user) {
+      updateUser({ publicMerchantApiKeyExists: true });
+    }
     setNewlyGeneratedKey(null);
   };
 
-
+  // --- Animation useEffect ---
   useEffect(() => {
     setTimeout(() => setShowText(true), 500);
     setTimeout(() => setShowCode(true), 1000);
   }, []);
 
+  // --- Transaction Fetching useEffect ---
   useEffect(() => {
-      // 1. Define the fetch function.
-      const fetchTransactions = async () => {
-        // The user check is important; don't fetch if the user isn't loaded.
-        if (!user) return; 
+    const fetchTransactions = async () => {
+      if (!user) return;
+      if (transactions.length === 0) setTransactionsLoading(true);
+      try {
+        const response = await apiClient.get<Transaction[]>("/merchant/payments");
+        setTransactions(response.data);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+      } finally {
+        setTransactionsLoading(false);
+      }
+    };
 
-        // Set loading state only for the initial load, not for background polls.
-        // This provides a smoother user experience.
-        // If you want a loading indicator for every poll, you can remove this check.
-        if (!transactions.length) {
-            setTransactionsLoading(true);
-        }
-        
-        try {
-          const csrfToken = getCookie("XSRF-TOKEN");
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/merchant/payments`, {
-            credentials: "include",
-            headers: {
-              "X-XSRF-TOKEN": csrfToken || "",
-            },
-          });
-          if (!response.ok) {
-            throw new Error("Failed to fetch transactions.");
-          }
-          const data: Transaction[] = await response.json();
-          setTransactions(data);
-        } catch (error) {
-          console.error("Error fetching transactions:", error);
-        } finally {
-          setTransactionsLoading(false);
-        }
-      };
+    fetchTransactions();
+    const intervalId = setInterval(fetchTransactions, POLLING_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [user]);
 
-      // 2. Fetch data immediately when the component mounts (or user changes).
-      fetchTransactions();
-
-      // 3. Set up the interval to poll for new data every 5 seconds.
-      const intervalId = setInterval(fetchTransactions, POLLING_INTERVAL);
-
-      // 4. IMPORTANT: Clean up the interval when the component unmounts.
-      // This prevents memory leaks and stops the polling when the user navigates away.
-      return () => clearInterval(intervalId);
-
-  }, [user]); // The 
+  // This "guard clause" prevents rendering until the user is loaded
   if (!user) {
-    return null; 
+    return (
+      <div className="flex justify-center items-center min-h-screen text-white text-2xl">
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -216,10 +162,10 @@ except Exception as e:
           Profile Details
         </h2>
         <p className="mb-2">
-          <span className="font-semibold text-blue-400">Name:</span> {user.name}
+          <span className="font-semibold text-blue-400">Name:</span> {user.publicMerchantName}
         </p>
         <p>
-          <span className="font-semibold text-blue-400">Email:</span> {user.email}
+          <span className="font-semibold text-blue-400">Email:</span> {user.publicMerchantEmail}
         </p>
       </section>
 
@@ -229,7 +175,7 @@ except Exception as e:
           API Key
         </h2>
         <div className="flex items-center space-x-3">
-          {user.apiKeyExists ? (
+          {user.publicMerchantApiKeyExists ? (
             <>
               <code className="bg-white/20 text-blue-300 px-4 py-2 rounded-lg break-words flex-grow">
                 sk_********************
@@ -252,9 +198,8 @@ except Exception as e:
             </button>
           )}
 
-          {user.apiKeyExists ?
+          {user.publicMerchantApiKeyExists ?
           <a
-            
             href="/demo"
             target="_blank"
             rel="noopener noreferrer"
@@ -266,17 +211,15 @@ except Exception as e:
         </div>
       </section>
 
-
       {/* Transactions & Balance Section */}
       <section className="max-w-4xl mx-auto w-full p-6 bg-white/10 backdrop-blur-md rounded-lg mb-16">
         <h2 className="text-2xl font-semibold border-b border-blue-500 pb-2 mb-4">
           Transactions & Balance
         </h2>
         <p className="text-3xl font-extrabold text-white mb-6">
-          Current Balance: ${user.balance.toFixed(2)}
+          Current Balance: ${user.publicMerchantBalance.toFixed(2)}
         </p>
         
-        {/* 3. Update the table to be fully dynamic */}
         {transactionsLoading ? (
           <p className="text-gray-300">Loading transactions...</p>
         ) : transactions.length === 0 ? (
@@ -304,7 +247,7 @@ except Exception as e:
                     className={`py-2 px-3 font-semibold ${
                       txn.status === "Success"
                         ? "text-green-400"
-                        : "text-yellow-400" // Default for other statuses
+                        : "text-yellow-400"
                     }`}
                   >
                     {txn.status}

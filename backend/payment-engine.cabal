@@ -42,6 +42,7 @@ executable payment-engine-exe
     , monad-logger
     , mtl
     , postgresql-simple
+    , random
     , servant
     , servant-auth-server
     , servant-server

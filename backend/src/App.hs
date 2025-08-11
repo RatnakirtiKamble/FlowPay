@@ -29,8 +29,8 @@ import Control.Monad.Except (ExceptT, MonadError)
 
 -- | The application environment containing shared resources and configuration.
 data AppEnv = AppEnv
-  { dbConnection :: Connection        -- ^ PostgreSQL database connection
-  , cookieCfg    :: CookieSettings    -- ^ Configuration for authentication cookies
+  { dbConnection :: Connection  
+  , cookieCfg    :: CookieSettings       -- ^ PostgreSQL database connection  
   , jwtCfg       :: JWTSettings       -- ^ Configuration for JWT authentication
   }
 

@@ -20,8 +20,7 @@ module Api (api, server) where
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
 import Servant
-import Servant.Auth.Server (AuthResult(..))
-import Web.Cookie (SetCookie)
+import Servant.Auth.Server (AuthResult(..), JWT, Auth)
 import Data.Text (Text)
 
 import Control.Monad.IO.Class (liftIO)
@@ -29,7 +28,6 @@ import Control.Monad.Reader (asks)
 import Database.PostgreSQL.Simple (query, Only(..))
 
 import App (App, AppEnv(..))
-import Auth (AuthMiddleware)
 import Handlers.AuthHandler (registerHandler, loginHandler, logoutHandler)
 import Handlers.AccountHandler (balanceHandler)
 import Handlers.PaymentHandler (paymentServer)
@@ -42,6 +40,7 @@ import Models.Merchant
   , Merchant(merchantId)
   , PublicMerchant
   , toPublicMerchant
+  , LoginResponse
   )
 import Models.Payment (Payment, PaymentRequest, PaymentResponse)
 
@@ -53,17 +52,18 @@ type PaymentAPI =
 -- | Public API routes available without authentication.
 type PublicAPI =
        "register" :> ReqBody '[JSON] RegistrationRequest :> Post '[JSON] PublicMerchant
-  :<|> "login" :> ReqBody '[JSON] LoginRequest :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
+  :<|> "login"    :> ReqBody '[JSON] LoginRequest :> Post '[JSON] LoginResponse
   :<|> PaymentAPI
 
 -- | Protected API routes requiring authentication via 'AuthMiddleware'.
 type ProtectedMerchantAPI =
-       AuthMiddleware :> "merchant" :> "balance" :> Get '[JSON] BalanceResponse
-  :<|> AuthMiddleware :> "merchant" :> "apikey" :> "generate" :> Post '[JSON] ApiKeyResponse
-  :<|> AuthMiddleware :> "merchant" :> "apikey" :> "revoke" :> Post '[JSON] NoContent
-  :<|> AuthMiddleware :> "logout" :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie, Header "Set-Cookie" SetCookie] NoContent)
-  :<|> AuthMiddleware :> "merchant" :> "payments" :> Get '[JSON] [Payment] 
-  :<|> AuthMiddleware :> "dashboard" :> Get '[JSON] PublicMerchant
+       Auth '[JWT] Merchant :> "merchant" :> "balance"  :> Get '[JSON] BalanceResponse
+  :<|> Auth '[JWT] Merchant :> "merchant" :> "apikey"   :> "generate" :> Post '[JSON] ApiKeyResponse
+  :<|> Auth '[JWT] Merchant :> "merchant" :> "apikey"   :> "revoke" :> Post '[JSON] NoContent
+  :<|> Auth '[JWT] Merchant :> "logout"                 :> Post '[JSON] NoContent
+  :<|> Auth '[JWT] Merchant :> "merchant" :> "payments" :> Get '[JSON] [Payment]
+  :<|> Auth '[JWT] Merchant :> "dashboard"              :> Get '[JSON] PublicMerchant
+
 
 type ProtectedAPI = ProtectedMerchantAPI
 
