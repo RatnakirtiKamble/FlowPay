@@ -5,9 +5,9 @@ import { useNavigate } from "react-router-dom";
 export type AuthMode = "login" | "signup";
 
 interface AuthModalProps {
-  mode: AuthMode;
-  onClose: () => void;
-  onModeChange: (mode: AuthMode) => void;
+  mode: AuthMode;                     // Whether the modal is in login or signup mode
+  onClose: () => void;                 // Close the modal
+  onModeChange: (mode: AuthMode) => void; // Switch between login/signup
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -27,6 +27,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const isSignup = mode === "signup";
 
+  // Handle login/signup submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -40,7 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (isSignup) {
-        // Corrected registration fetch call
+        // Attempt registration
         const registerRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -52,33 +53,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         });
 
         if (!registerRes.ok) {
-            const errorData = await registerRes.json().catch(() => ({}));
-            throw new Error(errorData.message || "Registration failed.");
+          const errorData = await registerRes.json().catch(() => ({}));
+          throw new Error(errorData.message || "Registration failed.");
         }
-        // After successful registration, log the user in
+        // Auto-login after successful signup
         await login(email, password);
-
       } else {
-        // Attempt to log in
+        // Login
         await login(email, password);
       }
 
-      // ---- SUCCESS CASE ----
-      // This code only runs if login() was successful (did not throw an error).
-      // Now we can safely close the modal and navigate.
+      // Success — close modal and go to dashboard
       onClose(); 
       navigate("/dashboard");
 
     } catch (err) {
-      // ---- FAILURE CASE ----
-      // If login() threw an error, it gets caught here.
-      // We set the local error state to display the message in the modal's UI.
+      // Show error message in UI
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Prevent closing modal when clicking inside it
   const stopPropagation = (e: MouseEvent<HTMLDivElement>) => e.stopPropagation();
 
   return (
@@ -87,12 +84,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg p-8 w-96 relative"
+        className="bg-white rounded-lg p-8 w-96 relative shadow-xl"
         onClick={stopPropagation}
       >
+        {/* Title */}
         <h2 className="text-2xl mb-4 text-blue-500 font-medium">
           {isSignup ? "Sign Up" : "Log In"}
         </h2>
+
+        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
           {isSignup && (
             <input
@@ -101,7 +101,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="p-2 rounded text-gray-500 bg-gray-200 border-gray-100"
+              className="p-2 rounded text-gray-700 bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           )}
           <input
@@ -110,7 +110,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="p-2 rounded text-gray-500 bg-gray-200 border-gray-100"
+            className="p-2 rounded text-gray-700 bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <input
             type="password"
@@ -118,7 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="p-2 rounded text-gray-500 bg-gray-200 border-gray-100"
+            className="p-2 rounded text-gray-700 bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           {isSignup && (
             <input
@@ -127,10 +127,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="p-2 rounded text-gray-500 bg-gray-200 border-gray-100"
+              className="p-2 rounded text-gray-700 bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           )}
+
+          {/* Error message */}
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+          {/* Switch between login and signup */}
           <button
             className="text-blue-500 text-sm"
             type="button"
@@ -140,14 +144,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ? "Already have an account? Log in instead."
               : "Don't have an account? Sign up now!"}
           </button>
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-500 hover:bg-blue-600 p-2 rounded text-white disabled:bg-gray-400"
+            className="bg-blue-500 hover:bg-blue-600 p-2 rounded text-white disabled:bg-gray-400 transition-colors"
           >
             {loading ? "Please wait..." : isSignup ? "Sign Up" : "Log In"}
           </button>
         </form>
+
+        {/* Close button */}
         <button
           className="absolute top-2 right-4 text-gray-400 hover:text-gray-600"
           onClick={onClose}

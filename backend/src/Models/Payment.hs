@@ -1,56 +1,75 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DuplicateRecordFields #-} 
+{-# LANGUAGE DuplicateRecordFields #-}
 
+{-|
+Module      : Models.Payment
+Description : Data models for payments, including database entities, 
+              API requests, and responses.
+
+This module defines:
+  * Full payment records (as stored in DB)
+  * Request/response types for payment processing
+  * JSON and DB row instances
+-}
 module Models.Payment where
 
-import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=))
+-- ========== Imports ==========
+import Data.Aeson
+  ( ToJSON(..), FromJSON(..), object, (.=) )
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 import Database.PostgreSQL.Simple.FromRow (FromRow)
 
--- This new data type represents a single payment record from your database.
--- It will be used to send the transaction history to your dashboard.
+-- ========== Payment Entity (Full DB Record) ==========
+
+-- | Represents a single payment record as stored in the database.
+-- Used for sending transaction history to the dashboard.
 data Payment = Payment
-  { paymentId   :: Int
-  , merchantId  :: Int
-  , amount      :: Double -- Now allowed due to the extension
-  , status      :: Text
-  , createdAt   :: UTCTime
+  { paymentId  :: Int       -- ^ Unique payment ID
+  , merchantId :: Int       -- ^ Associated merchant ID
+  , amount     :: Double    -- ^ Payment amount
+  , status     :: Text      -- ^ Payment status (e.g., "completed", "failed")
+  , createdAt  :: UTCTime   -- ^ Timestamp when payment was created
   } deriving (Generic, Show)
 
--- This instance allows the Payment type to be converted to JSON for the API response.
+-- | Serialize payment to JSON for API responses.
 instance ToJSON Payment
--- This instance allows the Payment type to be read from a database row.
+
+-- | Map database rows to 'Payment'.
 instance FromRow Payment
 
+-- ========== Payment Request & Response DTOs ==========
 
--- Your existing data types below are unchanged.
-
+-- | API request payload to initiate a payment.
 data PaymentRequest = PaymentRequest
-  { paymentAmount :: Double
+  { paymentAmount :: Double -- ^ Amount to be paid
   } deriving (Show, Generic)
 
 instance FromJSON PaymentRequest
 instance ToJSON PaymentRequest
 
+-- | API response payload after processing a payment.
 data PaymentResponse = PaymentResponse
-  { transactionId :: Int
-  , paymentStatus :: Text
-  , amount        :: Double -- Now allowed due to the extension
-  , newBalance    :: Double
+  { transactionId :: Int    -- ^ Unique transaction ID
+  , paymentStatus :: Text   -- ^ Status of the payment
+  , amount        :: Double -- ^ Amount processed
+  , newBalance    :: Double -- ^ Updated merchant balance
   } deriving (Show, Generic)
 
--- THIS IS THE FIX: Use pattern matching to explicitly bring the fields into scope,
--- which resolves the ambiguity for the 'amount' field.
+-- | Custom JSON encoding to avoid field name collisions and ensure clear API output.
 instance ToJSON PaymentResponse where
-    toJSON (PaymentResponse { transactionId = tid, paymentStatus = ps, amount = amt, newBalance = nb }) =
-        object
-            [ "transaction_id" .= tid
-            , "payment_status" .= ps
-            , "amount"         .= amt
-            , "new_balance"    .= nb
-            ]
+  toJSON (PaymentResponse { transactionId = tid
+                          , paymentStatus = ps
+                          , amount = amt
+                          , newBalance = nb
+                          }) =
+    object
+      [ "transaction_id" .= tid
+      , "payment_status" .= ps
+      , "amount"         .= amt
+      , "new_balance"    .= nb
+      ]
 
 instance FromJSON PaymentResponse

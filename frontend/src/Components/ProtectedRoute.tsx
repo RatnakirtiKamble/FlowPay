@@ -6,12 +6,20 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
+/**
+ * ProtectedRoute
+ * --------------
+ * Wraps routes that require authentication.
+ * - Shows a loading screen while verifying the session.
+ * - Redirects unauthenticated users to `/` (Home) with their intended
+ *   location in state, so they can be redirected back after logging in.
+ * - Renders children if authenticated.
+ */
 function ProtectedRoute({ children }: ProtectedRouteProps) {
-  // Get both accessToken and loading from the context
   const { accessToken, loading } = useAuth();
   const location = useLocation();
 
-  // 1. If we are still checking for a persisted session, show a loading indicator.
+  // 1. Show loading state while checking authentication
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen text-white text-2xl">
@@ -20,14 +28,12 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // 2. If we are done loading and there is NO accessToken, redirect to home.
-  // This is the key change. We check for the token, not the user object.
+  // 2. Redirect unauthenticated users to home
   if (!accessToken) {
-    // We can also pass the original location in state so the login page can redirect back here after success
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  // 3. If we are done loading and there IS an accessToken, show the protected content.
+  // 3. Render protected content if authenticated
   return <>{children}</>;
 }
 

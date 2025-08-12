@@ -137,7 +137,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col bg-transparent text-white min-h-screen">
+    <div className="flex flex-col bg-gradient-to-r from-black via-gray-900 to-black text-white min-h-screen">
       {/* Banner Section */}
       <section className="h-[calc(100vh-220px)] flex items-center px-16 text-white select-none">
         <div

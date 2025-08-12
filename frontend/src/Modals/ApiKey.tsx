@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 
 interface ApiKeyOverlayProps {
-  apiKey: string;
-  onClose: () => void;
+  apiKey: string;     // The newly generated API key to display
+  onClose: () => void; // Callback when modal should be closed
 }
 
 export const ApiKeyOverlay: React.FC<ApiKeyOverlayProps> = ({ apiKey, onClose }) => {
   const [copyButtonText, setCopyButtonText] = useState('Copy');
 
+  // --------------------------------------------------------------------
+  // Copy API key to clipboard
+  // --------------------------------------------------------------------
   const handleCopy = () => {
     navigator.clipboard.writeText(apiKey);
     setCopyButtonText('Copied!');
-    setTimeout(() => setCopyButtonText('Copy'), 2000); 
+    setTimeout(() => setCopyButtonText('Copy'), 2000); // Reset text after 2s
   };
 
+  // --------------------------------------------------------------------
+  // Close overlay on Escape key press
+  // --------------------------------------------------------------------
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -29,17 +35,21 @@ export const ApiKeyOverlay: React.FC<ApiKeyOverlayProps> = ({ apiKey, onClose })
   return (
     <div
       className="fixed inset-0 bg-black/70 flex justify-center items-center z-50 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={onClose} // Close modal if background is clicked
     >
       <div
         className="bg-gray-900 border border-blue-500 rounded-lg p-8 w-full max-w-md relative shadow-2xl text-white"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+        onClick={(e) => e.stopPropagation()} // Prevent background click from closing
       >
+        {/* Title */}
         <h2 className="text-2xl mb-4 font-bold text-blue-400">Your New API Key</h2>
+
+        {/* Warning message */}
         <p className="text-yellow-400 bg-yellow-900/30 p-3 rounded-md border border-yellow-600 mb-6">
           Please store this API key safely. You will not be able to see it again.
         </p>
 
+        {/* API Key Display + Copy Button */}
         <div className="flex items-center space-x-3 mb-6">
           <code className="bg-black text-green-400 px-4 py-2 rounded-lg break-all flex-grow select-all">
             {apiKey}
@@ -51,7 +61,8 @@ export const ApiKeyOverlay: React.FC<ApiKeyOverlayProps> = ({ apiKey, onClose })
             {copyButtonText}
           </button>
         </div>
-        
+
+        {/* Close Button */}
         <button
           onClick={onClose}
           className="w-full bg-gray-600 hover:bg-gray-700 transition-colors py-2 rounded-lg font-bold"

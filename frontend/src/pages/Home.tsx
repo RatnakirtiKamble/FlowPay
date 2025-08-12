@@ -18,7 +18,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[calc(100vh-210px)] text-white px-6">
+    <div className="flex flex-col items-center justify-center h-full min-h-[calc(100vh-210px)] text-white px-6 bg-gradient-to-r from-black via-gray-900 to-black">
       <main className="flex flex-col justify-center items-center text-center max-w-lg mx-auto">
         <h2 className="text-4xl font-bold mb-4">Seamless Payments, Scalable Systems</h2>
         <p className="text-gray-400 mb-8">

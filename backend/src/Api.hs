@@ -3,36 +3,48 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- |
--- Module      : Api
--- Description : Defines the Servant API type and server implementation.
---
--- This module exposes the complete API type for the application, including:
---  * Public routes: registration, login, and payment processing
---  * Protected routes: merchant balance, API key management, logout,
---    payments listing, and merchant dashboard
---
--- The API uses authentication middleware to protect sensitive endpoints.
--- The server implementation wires up all handlers imported from the Handlers modules.
---
+{-|
+Module      : Api
+Description : Defines the Servant API type and server implementation.
+
+This module contains the full application API definition and its corresponding
+server implementation.
+
+It includes:
+  * Public routes: registration, login, and payment processing.
+  * Protected routes: merchant balance, API key management, logout, payment history, and dashboard.
+
+Authentication:
+  * Public routes are accessible without authentication.
+  * Protected routes require JWT-based authentication via `Servant.Auth.Server`.
+
+Handlers are imported from dedicated `Handlers.*` modules to keep concerns separated.
+-}
 module Api (api, server) where
 
+-- ========== Imports ==========
+import Data.Text (Text)
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
 import Servant
 import Servant.Auth.Server (AuthResult(..), JWT, Auth)
-import Data.Text (Text)
-
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
 import Database.PostgreSQL.Simple (query, Only(..))
 
+-- Application & Handlers
 import App (App, AppEnv(..))
 import Handlers.AuthHandler (registerHandler, loginHandler, logoutHandler)
 import Handlers.AccountHandler (balanceHandler)
 import Handlers.PaymentHandler (paymentServer)
-import Handlers.MerchantHandler (merchantServer, revokeApiKeyHandler, listPaymentsHandler, ApiKeyResponse(..))
+import Handlers.MerchantHandler
+  ( merchantServer
+  , revokeApiKeyHandler
+  , listPaymentsHandler
+  , ApiKeyResponse(..)
+  )
 
+-- Models
 import Models.Merchant
   ( RegistrationRequest
   , LoginRequest
@@ -44,69 +56,69 @@ import Models.Merchant
   )
 import Models.Payment (Payment, PaymentRequest, PaymentResponse)
 
+-- ========== API TYPE DEFINITIONS ==========
 
--- | API endpoint for processing payments.
+-- | Endpoint for processing payments using an API key.
 type PaymentAPI =
-  Header "X-API-Key" Text :> "payments" :> ReqBody '[JSON] PaymentRequest :> Post '[JSON] PaymentResponse
+       Header "X-API-Key" Text
+  :>   "payments"
+  :>   ReqBody '[JSON] PaymentRequest
+  :>   Post '[JSON] PaymentResponse
 
--- | Public API routes available without authentication.
+-- | Public routes accessible without authentication.
 type PublicAPI =
        "register" :> ReqBody '[JSON] RegistrationRequest :> Post '[JSON] PublicMerchant
-  :<|> "login"    :> ReqBody '[JSON] LoginRequest :> Post '[JSON] LoginResponse
+  :<|> "login"    :> ReqBody '[JSON] LoginRequest       :> Post '[JSON] LoginResponse
   :<|> PaymentAPI
 
--- | Protected API routes requiring authentication via 'AuthMiddleware'.
+-- | Protected merchant routes requiring JWT authentication.
 type ProtectedMerchantAPI =
-       Auth '[JWT] Merchant :> "merchant" :> "balance"  :> Get '[JSON] BalanceResponse
-  :<|> Auth '[JWT] Merchant :> "merchant" :> "apikey"   :> "generate" :> Post '[JSON] ApiKeyResponse
-  :<|> Auth '[JWT] Merchant :> "merchant" :> "apikey"   :> "revoke" :> Post '[JSON] NoContent
-  :<|> Auth '[JWT] Merchant :> "logout"                 :> Post '[JSON] NoContent
-  :<|> Auth '[JWT] Merchant :> "merchant" :> "payments" :> Get '[JSON] [Payment]
-  :<|> Auth '[JWT] Merchant :> "dashboard"              :> Get '[JSON] PublicMerchant
-
+       Auth '[JWT] Merchant :> "merchant" :> "balance"   :> Get  '[JSON] BalanceResponse
+  :<|> Auth '[JWT] Merchant :> "merchant" :> "apikey"    :> "generate" :> Post '[JSON] ApiKeyResponse
+  :<|> Auth '[JWT] Merchant :> "merchant" :> "apikey"    :> "revoke"   :> Post '[JSON] NoContent
+  :<|> Auth '[JWT] Merchant :> "logout"                  :> Post '[JSON] NoContent
+  :<|> Auth '[JWT] Merchant :> "merchant" :> "payments"  :> Get  '[JSON] [Payment]
+  :<|> Auth '[JWT] Merchant :> "dashboard"               :> Get  '[JSON] PublicMerchant
 
 type ProtectedAPI = ProtectedMerchantAPI
 
--- | Complete API type combining public and protected routes.
+-- | Full API: public + protected.
 type API = PublicAPI :<|> ProtectedAPI
 
--- | Proxy for the API type.
+-- | Proxy for API type.
 api :: Proxy API
 api = Proxy
 
--- | Server implementation for the full API.
---
--- Combines the public and protected servers by wiring up all handler functions.
+-- ========== SERVER IMPLEMENTATION ==========
+
+-- | Server implementation wiring up public and protected routes.
 server :: ServerT API App
 server = publicServer :<|> protectedServer
   where
-    -- Public endpoints
-    publicServer = registerHandler :<|> loginHandler :<|> paymentServer
+    -- ----- Public Routes -----
+    publicServer =
+           registerHandler
+      :<|> loginHandler
+      :<|> paymentServer
 
-    -- Protected endpoints
+    -- ----- Protected Routes -----
     protectedServer =
-             merchantBalanceServer
-        :<|> merchantApiKeyServer
-        :<|> revokeApiKeyHandler
-        :<|> logoutHandler
-        :<|> listPaymentsHandler
-        :<|> dashboardServer
+           balanceHandler
+      :<|> merchantServer
+      :<|> revokeApiKeyHandler
+      :<|> logoutHandler
+      :<|> listPaymentsHandler
+      :<|> dashboardServer
 
-    merchantBalanceServer = balanceHandler
-    merchantApiKeyServer = merchantServer
-    logoutHandler = Handlers.AuthHandler.logoutHandler
-    listPaymentsHandler = Handlers.MerchantHandler.listPaymentsHandler
-
-    -- | Returns fresh public merchant details for the authenticated merchant.
+    -- | Fetch fresh merchant details for authenticated user.
     dashboardServer :: AuthResult Merchant -> App PublicMerchant
     dashboardServer (Authenticated merchant) = do
       let mId = merchantId merchant
       conn <- asks dbConnection
-      let sqlQuery = "SELECT merchant_id, name, email, password_hash, api_key, balance FROM merchants WHERE merchant_id = ?"
-
-      merchants <- liftIO $ query conn sqlQuery (Only mId)
+      let sql = "SELECT merchant_id, name, email, password_hash, api_key, balance \
+                \FROM merchants WHERE merchant_id = ?"
+      merchants <- liftIO $ query conn sql (Only mId)
       case merchants of
         []    -> throwError err404 { errBody = "Authenticated merchant not found in database." }
-        (m:_) -> return $ toPublicMerchant m 
-
+        (m:_) -> return $ toPublicMerchant m
     dashboardServer _ = throwError err401

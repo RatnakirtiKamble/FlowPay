@@ -25,8 +25,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (updatedFields: Partial<PublicMerchant>) => void;
-  refreshUser: () => Promise<void>; // ++ We will implement this
-  authModalMode: 'login' | 'signup' | null;
+  refreshUser: () => Promise<void>;
+  authModalMode: "login" | "signup" | null;
   openLoginModal: () => void;
   openSignupModal: () => void;
   closeAuthModal: () => void;
@@ -39,16 +39,24 @@ export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
 });
 
+// ====================================================================================
+// 3. CONTEXT CREATION
+// ====================================================================================
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ====================================================================================
+// 4. AUTH PROVIDER COMPONENT
+// ====================================================================================
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<PublicMerchant | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | null>(null);
+  const [authModalMode, setAuthModalMode] = useState<"login" | "signup" | null>(null);
   const navigate = useNavigate();
 
-  // --- Session Persistence from localStorage ---
+  // --------------------------------------------------------------------
+  // Load session from localStorage on initial mount
+  // --------------------------------------------------------------------
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem("accessToken");
@@ -64,14 +72,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // --- Axios Interceptor for Auth Headers ---
+  // --------------------------------------------------------------------
+  // Attach auth headers to every Axios request if user is logged in
+  // --------------------------------------------------------------------
   useEffect(() => {
     const requestInterceptor = apiClient.interceptors.request.use(
       (config) => {
         const xsrfToken = localStorage.getItem("xsrfToken");
         if (accessToken) {
-          config.headers['Authorization'] = `Bearer ${accessToken}`;
-          if (xsrfToken) config.headers['X-XSRF-TOKEN'] = xsrfToken;
+          config.headers["Authorization"] = `Bearer ${accessToken}`;
+          if (xsrfToken) config.headers["X-XSRF-TOKEN"] = xsrfToken;
         }
         return config;
       },
@@ -80,13 +90,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => apiClient.interceptors.request.eject(requestInterceptor);
   }, [accessToken]);
 
-  const openLoginModal = () => setAuthModalMode('login');
-  const openSignupModal = () => setAuthModalMode('signup');
+  // --------------------------------------------------------------------
+  // Modal control helpers
+  // --------------------------------------------------------------------
+  const openLoginModal = () => setAuthModalMode("login");
+  const openSignupModal = () => setAuthModalMode("signup");
   const closeAuthModal = () => setAuthModalMode(null);
 
-  // --- LOGIN/LOGOUT & USER UPDATE LOGIC ---
+  // --------------------------------------------------------------------
+  // Update only specific fields of the user object
+  // --------------------------------------------------------------------
   const updateUser = (updatedFields: Partial<PublicMerchant>) => {
-    setUser(prevUser => {
+    setUser((prevUser) => {
       if (!prevUser) return null;
       const newUser = { ...prevUser, ...updatedFields };
       localStorage.setItem("user", JSON.stringify(newUser));
@@ -94,8 +109,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // --------------------------------------------------------------------
+  // Perform login and store credentials in localStorage
+  // --------------------------------------------------------------------
   const login = async (email: string, password: string) => {
-    const response = await apiClient.post<LoginResponse>('/login', {
+    const response = await apiClient.post<LoginResponse>("/login", {
       loginEmail: email,
       loginPassword: password,
     });
@@ -106,7 +124,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAccessToken(lrAccessToken);
     setUser(lrMerchant);
   };
-  
+
+  // --------------------------------------------------------------------
+  // Clear session and navigate to home
+  // --------------------------------------------------------------------
   const logout = () => {
     setAccessToken(null);
     setUser(null);
@@ -116,24 +137,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate("/");
   };
 
-  // ++ NEW: A function to fetch the latest user data from the /dashboard endpoint
+  // --------------------------------------------------------------------
+  // Fetch latest user data from backend
+  // --------------------------------------------------------------------
   const refreshUser = async () => {
     try {
-      const response = await apiClient.get<PublicMerchant>('/dashboard');
-      updateUser(response.data); // Update the user state with the fresh data
+      const response = await apiClient.get<PublicMerchant>("/dashboard");
+      updateUser(response.data);
     } catch (error) {
       console.error("Failed to refresh user data:", error);
-      // If the token is expired or invalid, log the user out
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         logout();
       }
     }
   };
 
-  const contextValue = useMemo(() => ({
-    user, accessToken, loading, login, logout, updateUser, refreshUser, // ++ Expose refreshUser
-    authModalMode, openLoginModal, openSignupModal, closeAuthModal
-  }), [user, accessToken, loading, authModalMode]);
+  // --------------------------------------------------------------------
+  // Memoized context value for performance
+  // --------------------------------------------------------------------
+  const contextValue = useMemo(
+    () => ({
+      user,
+      accessToken,
+      loading,
+      login,
+      logout,
+      updateUser,
+      refreshUser,
+      authModalMode,
+      openLoginModal,
+      openSignupModal,
+      closeAuthModal,
+    }),
+    [user, accessToken, loading, authModalMode]
+  );
 
   return (
     <AuthContext.Provider value={contextValue}>
@@ -142,8 +179,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// ====================================================================================
+// 5. HOOK FOR CONSUMERS
+// ====================================================================================
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
+  if (context === undefined)
+    throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };

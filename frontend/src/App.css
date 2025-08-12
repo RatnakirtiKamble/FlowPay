@@ -7,17 +7,11 @@ html, body, #root {
   scrollbar-width: none; 
 }
 
+
 html::-webkit-scrollbar {
-  display: none; /* Chrome, Safari */
+  display: none; 
 }
-.animated-black-bg {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(270deg, #0a0a0a, #1a1a1a, #0a0a0a);
-  background-size: 600% 600%;
-  animation: gradientShift 15s ease infinite;
-  z-index: -1;
-}
+
 
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }
