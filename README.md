@@ -1,4 +1,4 @@
-# FlowPay — Functional Payments Platform in Haskell
+# FlowPay — Functional Payments Platform in Haskell (https://flowpayratna.netlify.app/)
 
 FlowPay is a lightweight, scalable, and secure payment backend built entirely in Haskell, with a modern TypeScript + React frontend, JWT-based authentication, PostgreSQL persistence, and a microservice-friendly architecture.
 
@@ -34,8 +34,8 @@ This project demonstrates how functional programming principles can power a real
 
 
 ## Project Structure
-
-lowpay/
+```
+Flowpay/
 ├── backend/
 │ ├── app/ 
 | | ├── Main.hs Server entry point
@@ -58,7 +58,7 @@ lowpay/
 │ └── package.json
 │
 └── README.md
-
+```
 
 
 ## Quick Start
